@@ -332,8 +332,8 @@ body{background:radial-gradient(ellipse at center,#3a1a5c 0%,#1a0a2e 60%,#05010f
         <div id="panelStart" class="screenPanel">
           <div class="title">T 恤 接 力 大 作 战</div>
           <div class="subTitle">
-            30 秒内冲刺 <b style="color:#ffd700">50 分</b> 挑战成功<br>
-            常规 / 黑色 T 恤 +1 分 ｜ <b style="color:#ffd700">金色 T 恤 +2 分</b> ｜ <b style="color:#ff7e5f">剪刀 = 清屏</b> ｜ <b style="color:#ffd700">礼盒 = 随机奖励</b>
+            30 秒内得分 <b style="color:#ffd700">≥ 50 分</b> 获 <b style="color:#ffd700">1 次抽奖</b> ｜ 得分 <b style="color:#ffd700">≥ 100 分</b> 获 <b style="color:#ffd700">2 次抽奖</b><br>
+            T 恤 +1 分 ｜ <b style="color:#ffd700">金色 T 恤 +2 分</b> ｜ <b style="color:#ff7e5f">剪刀 = 清屏</b> ｜ <b style="color:#ffd700">礼盒 = 随机奖励</b>
           </div>
           <input id="nameInput" class="nameInput" placeholder="请输入玩家名字 (1-12 字)" maxlength="12"/>
           <div class="modeRow">
@@ -382,7 +382,7 @@ body{background:radial-gradient(ellipse at center,#3a1a5c 0%,#1a0a2e 60%,#05010f
         <div id="panelEnd" class="screenPanel hide">
           <div id="endTitle"></div>
           <div id="endDetail"></div>
-          <div id="boardList2" style="width:90%;max-width:520px;max-height:34%;overflow-y:auto;background:rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.15);border-radius:12px;padding:10px;margin-bottom:14px"></div>
+          <div id="boardList2" class="hide" style="width:90%;max-width:520px;max-height:34%;overflow-y:auto;background:rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.15);border-radius:12px;padding:10px;margin-bottom:14px"></div>
           <div style="display:flex;gap:14px">
             <button id="btnRetry" class="modeBtn" style="padding:14px 36px;font-size:1.05rem;background:linear-gradient(135deg,#f953c6,#b91d73);box-shadow:0 0 24px #f953c680;color:#fff">再玩一次</button>
             <button id="btnHome" class="lineBtn">返回首页</button>
@@ -741,14 +741,15 @@ function doSpawn(){
   if(!running)return;
   if(Date.now()<buffs.clearTill){spawnID=setTimeout(doSpawn,200);return}
   var r=Math.random();
-  // 双人模式难度更高，剪刀更常出现
-  var scissorRate = mode===2 ? 0.16 : 0.10;
+  // 双人模式难度更高，剪刀更常出现；单人模式同步提升剪刀概率
+  var scissorRate = mode===2 ? 0.18 : 0.15;
   var giftEnd     = scissorRate + 0.08;
   if(r<scissorRate)spawnItem("scissor");
   else if(r<giftEnd)spawnItem("gift");
   else spawnShirt();
   var t=TOTAL_TIME-timeLeft;
-  var base=t<10?480:t<20?360:280;
+  // 提升非冲刺期间的生成密度
+  var base=t<10?340:t<20?260:220;
   if(rushing)base*=.5; // 冲刺期：生成更密集
   if(buffs.freeze>0)base*=1.35;
   spawnID=setTimeout(doSpawn,base+rand(-60,90));
@@ -826,7 +827,8 @@ function moveShirts(){
       removeEl(s.el);shirts.splice(i,1);
       if(s.type==="shirt"&&s.good){
         // 双人模式下因盖子关闭而漏接：也算 miss（按用户期待，盖子是策略）
-        misses++;combo=0;refreshCombo();sfxMiss();shakeBasket();
+        // 漏接不打断连击：保留 combo
+        misses++;sfxMiss();shakeBasket();
       }
     }
   }
@@ -838,30 +840,33 @@ function onCatch(s,cx,cy){
     sfxItem();
     if(s.kind==="scissor"){triggerClearScreen();floatTextAt(cx,cy,"✂️ 清屏!","#ff7e5f");burst(cx,cy,"#ff7e5f",true,3)}
     else{var r=Math.random();
-      // 礼盒概率分布：高额积分 / 双倍 概率仍最大；剪刀 / 冰冻 适当上调
-      if(r<.26){       // 26% +5 分
+      // 礼盒概率分布：进一步降低扣分/冰冻/剪刀概率
+      if(r<.33){       // 33% +2 分
+        score+=2;refreshScore();floatTextAt(cx,cy,"🎁 +2 分!","#ffd700");burst(cx,cy,"#ffd700",true,2);
+      } else if(r<.60){ // 27% +5 分
         score+=5;refreshScore();floatTextAt(cx,cy,"🎁 +5 分!","#ffd700");burst(cx,cy,"#ffd700",true,3);
-      } else if(r<.46){ // 20% +10 分
-        score+=10;refreshScore();floatTextAt(cx,cy,"🎁 +10 分!","#ffd700");burst(cx,cy,"#ffd700",true,4);
-      } else if(r<.68){ // 22% 双倍 8s
-        buffs.double=8;refreshBuffs();floatTextAt(cx,cy,"🎁 双倍 8s!","#ffd700");burst(cx,cy,"#ffd700",true,3);
-      } else if(r<.86){ // 18% 剪刀清屏
+      } else if(r<.83){ // 23% 双倍 3s
+        buffs.double=3;refreshBuffs();floatTextAt(cx,cy,"🎁 双倍 3s!","#ffd700");burst(cx,cy,"#ffd700",true,3);
+      } else if(r<.90){ // 7% 剪刀清屏
         triggerClearScreen();floatTextAt(cx,cy,"🎁 剪刀!","#ff7e5f");burst(cx,cy,"#ff7e5f",true,3);
-      } else {          // 14% 冰冻 5s
-        buffs.freeze=5;refreshBuffs();floatTextAt(cx,cy,"🎁 冰冻 5s!","#00d2ff");burst(cx,cy,"#00d2ff",true,3);
+      } else if(r<.96){ // 6% 冰冻 3s
+        buffs.freeze=3;refreshBuffs();floatTextAt(cx,cy,"🎁 冰冻 3s!","#00d2ff");burst(cx,cy,"#00d2ff",true,3);
+      } else if(r<.99){ // 3% -2 分
+        score=Math.max(0,score-2);refreshScore();combo=0;refreshCombo();floatTextAt(cx,cy,"💀 -2 分!","#ff4d6d");burst(cx,cy,"#ff4d6d",true,3);screenFlash("#ff4d6d33");sfxMiss();shakeBasket();
+      } else {          // 1% -4 分
+        score=Math.max(0,score-4);refreshScore();combo=0;refreshCombo();floatTextAt(cx,cy,"💀 -4 分!","#ff1744");burst(cx,cy,"#ff1744",true,4);screenFlash("#ff174455");sfxMiss();shakeBasket();
       }
     }
     pulseBasket(true);return;
   }
   if(s.good){
     combo++;catches++;if(combo>maxCombo)maxCombo=combo;
-    var mult=Math.min(1+Math.floor(combo/5),5);
     var basePts=s.gold?2:1;
-    var pts=mult*basePts;if(buffs.double>0)pts*=2;
+    var pts=basePts;if(buffs.double>0)pts*=2;
     score+=pts;refreshScore();refreshCombo();
-    sfxCatch(true);if(mult>1)sfxCombo(mult);
+    sfxCatch(true);if(combo>1&&combo%5===0)sfxCombo(Math.min(Math.floor(combo/5)+1,5));
     floatTextAt(cx,cy,(s.gold?"⭐ ":"")+(buffs.double>0?"x2 ":"")+"+"+pts,s.gold?"#ffd700":s.color);
-    burst(cx,cy,s.gold?"#ffd700":s.color,true,mult+(s.gold?1:0));pulseBasket(true);
+    burst(cx,cy,s.gold?"#ffd700":s.color,true,1+(s.gold?1:0));pulseBasket(true);
     if(combo===COMBO_BONUS_AT){score+=COMBO_BONUS_PTS;refreshScore();showBigCombo("29 连击! +"+COMBO_BONUS_PTS+" 奖励");sfxBreak()}
     else if(combo>0&&combo%5===0)showBigCombo(combo+" 连击！");
   }
@@ -869,7 +874,8 @@ function onCatch(s,cx,cy){
 
 function triggerClearScreen(){
   for(var i=shirts.length-1;i>=0;i--){var s=shirts[i];poof(s.x+30,s.y+30,s.color);removeEl(s.el)}
-  shirts=[];buffs.clearTill=Date.now()+3000;buffs.scissor=3;refreshBuffs();
+  shirts=[];buffs.clearTill=Date.now()+1000;buffs.scissor=1;refreshBuffs();
+  combo=0;refreshCombo();
   screenFlash("#ff7e5f33");sfxScissor();
 }
 
@@ -881,8 +887,7 @@ function refreshCombo(){
   if(combo===0){comboFloat.style.opacity="0";tag.textContent="";return}
   comboFloat.style.opacity="1";
   comboFloat.className=combo>=20?"fire":combo>=10?"hot":"";
-  var mult=Math.min(1+Math.floor(combo/5),5);
-  tag.textContent=mult>1?"x"+mult+" 倍率":"";
+  tag.textContent="";
   num.animate([{transform:"scale(1.4)"},{transform:"scale(1)"}],{duration:200,easing:"ease-out"});
 }
 function refreshBuffs(){
@@ -943,13 +948,22 @@ function endGame(){
 
   showPanel(panelEnd);
   var t=el("endTitle"),d=el("endDetail");
-  if(passed){t.textContent="🎉 挑战成功 🎉";t.style.color="#ffd700";t.style.textShadow="0 0 24px #ffd700"}
-  else{t.textContent="挑战未完成";t.style.color="#ff6b6b";t.style.textShadow="0 0 18px #ff6b6b"}
+  var lotteryChances=0;
+  if(score>=100){
+    lotteryChances=2;
+    t.textContent="🏆 太牛了！获得 2 次抽奖机会 🏆";
+    t.style.color="#ffd700";t.style.textShadow="0 0 24px #ffd700,0 0 50px #ff6ec7";
+  } else if(score>=50){
+    lotteryChances=1;
+    t.textContent="🎉 挑战成功，获得 1 次抽奖机会 🎉";
+    t.style.color="#ffd700";t.style.textShadow="0 0 24px #ffd700";
+  } else {
+    t.textContent="挑战未完成";t.style.color="#ff6b6b";t.style.textShadow="0 0 18px #ff6b6b";
+  }
   d.innerHTML="玩家：<b style='color:#fff'>"+escapeHtml(playerName)+"</b> <span style='color:"+(mode===2?"#f9a825":"#7ad6ff")+"'>["+(mode===2?"双人":"单人")+"模式]</span><br>"+
     "最终得分：<b style='color:#ffd700'>"+score+"</b> 分 &nbsp;｜&nbsp; 目标 "+PASS_SCORE+" 分<br>"+
     "接住：<b style='color:#00d2ff'>"+catches+"</b> 件 &nbsp;｜&nbsp; 漏接：<b style='color:#ff8888'>"+misses+"</b> 件 &nbsp;｜&nbsp; 最高连击：<b style='color:#ff6ec7'>"+maxCombo+"</b><br>"+
     "<span style='color:#aab'>本次排名：<b style='color:#ffd700;font-size:1.6rem'>#"+rank+"</b></span>";
-  renderBoardFull(el("boardList2"),entry);
 
   if(broke||(first&&passed)){showBreakRecord(first?"首 次 上 榜":"打 破 纪 录");sfxBreak();fireworks()}
 }
