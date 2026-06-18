@@ -1,0 +1,2376 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>360° VR 全景编辑器</title>
+<style>
+:root {
+  --pri: #00d4ff; --pri-d: #00a8cc; --acc: #ff6b6b;
+  --bg: #0c0c0f; --panel: #161620; --surf: #1e1e2a; --surf2: #272736;
+  --bdr: #2e2e40; --txt: #e0e0f0; --dim: #7070a0;
+  --r: 8px; --tr: .2s ease;
+  --green: #4ade80; --amber: #fbbf24; --red: #f87171;
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--txt);
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:14px}
+button{cursor:pointer;font-family:inherit}
+input,textarea,select{font-family:inherit}
+
+/* ── LAYOUT ───────────────────────────────────────── */
+#app{display:flex;height:100vh}
+
+/* ── LEFT PANEL ───────────────────────────────────── */
+#lp{width:300px;min-width:300px;background:var(--panel);display:flex;
+  flex-direction:column;border-right:1px solid var(--bdr);
+  transition:width .3s ease,min-width .3s ease,opacity .3s ease;overflow:hidden;z-index:20}
+#lp.closed{width:0;min-width:0;opacity:0;pointer-events:none}
+.lp-head{padding:14px 16px;border-bottom:1px solid var(--bdr);
+  display:flex;align-items:center;gap:8px;flex-shrink:0}
+.lp-logo{font-size:16px;font-weight:700;color:var(--pri);letter-spacing:-.3px}
+.lp-tabs{display:flex;border-bottom:1px solid var(--bdr);flex-shrink:0}
+.lp-tab{flex:1;padding:9px 2px;text-align:center;font-size:12px;font-weight:500;
+  cursor:pointer;color:var(--dim);border-bottom:2px solid transparent;transition:var(--tr)}
+.lp-tab:hover:not(.on){color:var(--txt)}
+.lp-tab.on{color:var(--pri);border-bottom-color:var(--pri)}
+.lp-body{flex:1;overflow-y:auto;overflow-x:hidden}
+.lp-body::-webkit-scrollbar{width:3px}
+.lp-body::-webkit-scrollbar-thumb{background:var(--bdr);border-radius:2px}
+.tab{display:none;padding:14px}
+.tab.on{display:block}
+
+/* ── FORM ATOMS ───────────────────────────────────── */
+.sec{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.9px;
+  color:var(--dim);margin:4px 0 8px}
+.fg{margin-bottom:12px}
+.fl{display:block;font-size:11px;color:var(--dim);margin-bottom:5px;font-weight:500}
+.fi{width:100%;padding:7px 10px;background:var(--surf);border:1px solid var(--bdr);
+  border-radius:var(--r);color:var(--txt);font-size:13px;outline:none;transition:border-color var(--tr)}
+.fi:focus{border-color:var(--pri)}
+.fta{resize:vertical;min-height:80px;line-height:1.55}
+select.fi option{background:var(--surf)}
+hr.div{border:none;border-top:1px solid var(--bdr);margin:14px 0}
+.tip{background:rgba(0,212,255,.05);border:1px solid rgba(0,212,255,.18);
+  border-radius:var(--r);padding:9px 11px;font-size:11px;line-height:1.6;color:var(--dim);margin-top:6px}
+
+/* ── BUTTONS ──────────────────────────────────────── */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:5px;
+  padding:8px 13px;border:none;border-radius:var(--r);font-size:13px;font-weight:500;
+  transition:var(--tr);white-space:nowrap}
+.btn-p{background:var(--pri);color:#000}.btn-p:hover{background:var(--pri-d)}
+.btn-s{background:var(--surf2);color:var(--txt)}.btn-s:hover{background:#323248}
+.btn-d{background:rgba(248,113,113,.12);color:var(--red)}.btn-d:hover{background:rgba(248,113,113,.22)}
+.btn-sm{padding:5px 9px;font-size:12px}
+.btn-full{width:100%}
+.btn:disabled{opacity:.38;cursor:not-allowed}
+.ib{background:none;border:none;color:var(--dim);padding:4px;border-radius:4px;
+  font-size:14px;line-height:1;transition:var(--tr)}
+.ib:hover{background:var(--surf2);color:var(--txt)}
+.ib.del:hover{color:var(--red)}
+
+/* ── TOGGLE ───────────────────────────────────────── */
+.tog-row{display:flex;align-items:center;gap:10px;padding:3px 0}
+.tog-lbl{flex:1;font-size:13px}
+.tog{width:36px;height:20px;background:var(--surf2);border-radius:10px;
+  cursor:pointer;position:relative;transition:background .2s;flex-shrink:0}
+.tog.on{background:var(--pri)}
+.tog::after{content:'';position:absolute;top:2px;left:2px;width:16px;height:16px;
+  background:#fff;border-radius:50%;transition:left .2s}
+.tog.on::after{left:18px}
+
+/* ── UPLOAD ZONE ──────────────────────────────────── */
+.uz{border:2px dashed var(--bdr);border-radius:var(--r);padding:16px;text-align:center;
+  cursor:pointer;transition:var(--tr);background:var(--surf)}
+.uz:hover,.uz.dv{border-color:var(--pri);background:rgba(0,212,255,.05)}
+.uz-ic{font-size:24px;margin-bottom:6px}
+.uz-tx{font-size:11px;color:var(--dim);line-height:1.5}
+.uz-prev{width:100%;height:80px;object-fit:cover;border-radius:5px;margin-top:8px;display:none}
+.uz.has .uz-prev{display:block}
+.uz.has .uz-ic,.uz.has .uz-tx{display:none}
+
+/* ── SCENE LIST ───────────────────────────────────── */
+.sc-item{display:flex;align-items:center;gap:8px;padding:7px 8px;
+  border-radius:var(--r);cursor:pointer;transition:var(--tr);
+  border:1px solid transparent;margin-bottom:5px}
+.sc-item:hover{background:var(--surf)}
+.sc-item.cur{background:rgba(0,212,255,.1);border-color:rgba(0,212,255,.25)}
+.sc-thumb{width:44px;height:32px;border-radius:4px;background:var(--surf2);
+  overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:16px}
+.sc-thumb img{width:100%;height:100%;object-fit:cover}
+.sc-info{flex:1;min-width:0}
+.sc-name{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sc-meta{font-size:10px;color:var(--dim);margin-top:1px}
+.sc-acts{display:flex;gap:2px;opacity:0;transition:opacity var(--tr)}
+.sc-item:hover .sc-acts{opacity:1}
+.bdg{display:inline-flex;align-items:center;padding:1px 5px;
+  border-radius:3px;font-size:9px;font-weight:700}
+.bdg-c{background:rgba(0,212,255,.15);color:var(--pri)}
+.bdg-h{background:rgba(112,112,160,.15);color:var(--dim)}
+
+/* ── HOTSPOT/TB LIST ──────────────────────────────── */
+.it-entry{display:flex;align-items:center;gap:7px;padding:7px 6px;
+  border-radius:var(--r);transition:var(--tr);margin-bottom:3px}
+.it-entry:hover{background:var(--surf)}
+.it-ic{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;
+  justify-content:center;font-size:13px;flex-shrink:0}
+.it-ic.sc{background:rgba(0,212,255,.18)}.it-ic.inf{background:rgba(251,191,36,.18)}
+.it-ic.tb{background:rgba(74,222,128,.18)}
+.it-lbl{flex:1;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.it-acts{display:flex;gap:2px;opacity:0;transition:opacity var(--tr)}
+.it-entry:hover .it-acts{opacity:1}
+.empty{text-align:center;padding:20px 10px;color:var(--dim);font-size:12px}
+.empty-ic{font-size:28px;margin-bottom:6px;opacity:.4}
+
+/* ── VIEWER ───────────────────────────────────────── */
+#vw{flex:1;position:relative;background:#000;overflow:hidden}
+#cc{width:100%;height:100%}
+#cc canvas{display:block;width:100%!important;height:100%!important}
+
+/* ── TRANSITION ───────────────────────────────────── */
+#tr-ov{position:absolute;inset:0;background:#000;opacity:0;
+  transition:opacity .35s ease;pointer-events:none;z-index:200}
+#tr-ov.on{opacity:1}
+
+/* ── SAVE TOAST ───────────────────────────────────── */
+#save-toast{position:absolute;top:18px;left:50%;transform:translate(-50%,-12px);
+  background:rgba(0,212,255,.95);color:#001018;padding:8px 16px;border-radius:20px;
+  font-size:13px;font-weight:600;box-shadow:0 4px 14px rgba(0,0,0,.4);
+  pointer-events:none;opacity:0;transition:opacity .25s ease,transform .25s ease;z-index:250}
+#save-toast.on{opacity:1;transform:translate(-50%,0)}
+
+/* ── HOTSPOT / TEXTBOX OVERLAY ─────────────────────── */
+#ov{position:absolute;inset:0;pointer-events:none;z-index:100}
+
+.hs-mk{position:absolute;transform:translate(-50%,-50%);pointer-events:auto;cursor:pointer}
+.hs-ring{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;
+  justify-content:center;font-size:19px;position:relative;
+  transition:transform .2s ease;box-shadow:0 3px 14px rgba(0,0,0,.45)}
+.hs-ring.tp-sc{background:rgba(0,212,255,.85);border:2px solid rgba(255,255,255,.45);color:#00d4ff}
+.hs-ring.tp-inf{background:rgba(251,191,36,.85);border:2px solid rgba(255,255,255,.45);color:#fbbf24}
+.hs-ring::before{content:'';position:absolute;inset:-7px;border-radius:50%;
+  border:2px solid currentColor;opacity:.4;animation:hspulse 2.2s infinite}
+@keyframes hspulse{0%{transform:scale(.75);opacity:.7}70%{transform:scale(1.6);opacity:0}100%{transform:scale(.75);opacity:0}}
+.hs-mk:hover .hs-ring{transform:scale(1.15)}
+/* 编辑模式拖拽光标；图片弹窗样式 */
+.hs-mk.em .hs-ring{cursor:grab}.tb-ov.em .tb-panel{cursor:grab}
+.hs-ring.tp-img{background:rgba(139,195,74,.85);border:2px solid rgba(255,255,255,.45);color:#7cb342}
+#ip-img-wrap{margin-bottom:12px;border-radius:8px;overflow:hidden;background:#000;line-height:0}
+#ip-img{width:100%;max-height:58vh;object-fit:contain;display:block;margin:0 auto}
+.hs-lbl{position:absolute;top:calc(100% + 6px);left:50%;transform:translateX(-50%);
+  white-space:nowrap;background:rgba(0,0,0,.8);color:#fff;padding:3px 8px;
+  border-radius:4px;font-size:11px;font-weight:500;pointer-events:none;
+  backdrop-filter:blur(4px)}
+.hs-mk.em .hs-ring{box-shadow:0 0 0 2.5px var(--pri),0 3px 14px rgba(0,0,0,.45)}
+.hs-ebtns{display:none;position:absolute;top:-36px;left:50%;transform:translateX(-50%);
+  gap:3px;background:rgba(10,10,20,.9);padding:4px 6px;border-radius:6px;white-space:nowrap;z-index:5}
+.hs-mk.em:hover .hs-ebtns{display:flex}
+.hs-ebtn{background:none;border:none;color:var(--txt);cursor:pointer;font-size:11px;
+  padding:2px 5px;border-radius:3px;transition:var(--tr)}
+.hs-ebtn:hover{background:var(--surf2)}
+.hs-ebtn.del:hover{color:var(--red)}
+
+.tb-ov{position:absolute;transform:translate(-50%,-50%);pointer-events:none;z-index:99}
+.tb-panel{background:rgba(5,5,15,.75);backdrop-filter:blur(12px);
+  border:1px solid rgba(255,255,255,.12);border-radius:10px;
+  padding:11px 15px;max-width:270px;min-width:130px;color:#fff;
+  box-shadow:0 8px 32px rgba(0,0,0,.45)}
+.tb-title{font-size:13px;font-weight:600;margin-bottom:5px;
+  border-bottom:1px solid rgba(255,255,255,.12);padding-bottom:5px}
+.tb-cont{font-size:12px;line-height:1.65;color:rgba(255,255,255,.82);white-space:pre-wrap}
+.tb-ov.em{pointer-events:auto;cursor:pointer}
+.tb-ov.em .tb-panel{border-color:rgba(74,222,128,.45)}
+.tb-ebtns{display:none;position:absolute;top:-34px;right:0;
+  gap:3px;background:rgba(10,10,20,.9);padding:4px 6px;border-radius:6px;z-index:5}
+.tb-ov.em:hover .tb-ebtns{display:flex}
+
+/* ── TOP BAR ──────────────────────────────────────── */
+#topbar{position:absolute;top:0;left:0;right:0;display:flex;align-items:center;
+  gap:10px;padding:10px 14px;
+  background:linear-gradient(to bottom,rgba(0,0,0,.65) 0%,transparent 100%);
+  z-index:150;pointer-events:none}
+#topbar>*{pointer-events:auto}
+.tb-title-main{flex:1;font-size:15px;font-weight:600;color:#fff;
+  text-shadow:0 1px 5px rgba(0,0,0,.9)}
+.tbbtn{background:rgba(0,0,0,.52);backdrop-filter:blur(8px);
+  border:1px solid rgba(255,255,255,.14);color:#fff;padding:6px 12px;
+  border-radius:18px;font-size:12px;cursor:pointer;transition:var(--tr);
+  display:flex;align-items:center;gap:5px}
+.tbbtn:hover{background:rgba(255,255,255,.14)}
+.tbbtn.on{background:var(--amber);color:#000;border-color:var(--amber)}
+
+/* ── EDIT BANNER ──────────────────────────────────── */
+#ebanner{position:absolute;top:58px;left:50%;transform:translateX(-50%);
+  background:rgba(251,191,36,.92);color:#000;padding:8px 18px;
+  border-radius:20px;font-size:12px;font-weight:600;z-index:160;
+  display:none;align-items:center;gap:10px;backdrop-filter:blur(8px);
+  box-shadow:0 4px 20px rgba(0,0,0,.35)}
+#ebanner.on{display:flex}
+.eban-cancel{background:rgba(0,0,0,.18);border:none;border-radius:8px;
+  color:#000;padding:3px 9px;font-size:11px;cursor:pointer;font-weight:600}
+
+/* ── INFO POPUP ───────────────────────────────────── */
+#ip-bg{position:absolute;inset:0;background:rgba(0,0,0,.52);
+  backdrop-filter:blur(3px);z-index:490;display:none}
+#ip-bg.on{display:block}
+#ip{position:absolute;top:50%;left:50%;
+  transform:translate(-50%,-50%) scale(.92);
+  background:rgba(12,12,20,.96);backdrop-filter:blur(18px);
+  border:1px solid rgba(255,255,255,.12);border-radius:14px;
+  padding:20px 22px;width:min(460px,calc(100vw - 40px));
+  max-height:72vh;overflow-y:auto;color:#fff;z-index:500;
+  display:none;box-shadow:0 20px 60px rgba(0,0,0,.7);
+  transition:transform .25s ease,opacity .25s ease;opacity:0}
+#ip.on{display:block;transform:translate(-50%,-50%) scale(1);opacity:1}
+.ip-head{display:flex;align-items:center;gap:9px;margin-bottom:12px;
+  padding-bottom:11px;border-bottom:1px solid rgba(255,255,255,.1)}
+.ip-ic{font-size:22px}
+.ip-ttl{flex:1;font-size:16px;font-weight:600}
+.ip-x{background:rgba(255,255,255,.1);border:none;color:#fff;width:26px;height:26px;
+  border-radius:50%;cursor:pointer;font-size:13px;display:flex;align-items:center;
+  justify-content:center;transition:var(--tr)}
+.ip-x:hover{background:rgba(255,255,255,.2)}
+.ip-body{font-size:13px;line-height:1.75;color:rgba(255,255,255,.84);white-space:pre-wrap}
+
+/* ── HINT ─────────────────────────────────────────── */
+#hint{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+  text-align:center;color:rgba(255,255,255,.42);pointer-events:none;
+  z-index:50;transition:opacity .5s}
+#hint.hid{opacity:0;pointer-events:none}
+.hint-ic{font-size:46px;margin-bottom:10px}
+.hint-tx{font-size:15px;font-weight:500}
+.hint-sub{font-size:12px;margin-top:5px;opacity:.7}
+
+/* ── BOTTOM NAV ───────────────────────────────────── */
+#bnav{position:absolute;bottom:0;left:0;right:0;
+  background:linear-gradient(to top,rgba(0,0,0,.82) 0%,transparent 100%);
+  padding:18px 14px 14px;z-index:150}
+#bnav-in{display:flex;align-items:flex-end;gap:9px;overflow-x:auto;
+  padding-bottom:3px;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.18) transparent}
+#bnav-in::-webkit-scrollbar{height:3px}
+#bnav-in::-webkit-scrollbar-thumb{background:rgba(255,255,255,.18);border-radius:2px}
+.nc{flex-shrink:0;display:flex;flex-direction:column;align-items:center;
+  cursor:pointer;transition:transform .25s ease,opacity .25s ease;gap:5px}
+.nc:hover{transform:translateY(-4px)}
+.nc.cur .nc-th{border-color:var(--pri);box-shadow:0 0 0 2px var(--pri),0 4px 18px rgba(0,212,255,.3)}
+.nc-th{width:68px;height:48px;border-radius:7px;overflow:hidden;
+  border:2px solid rgba(255,255,255,.18);transition:border-color .25s,box-shadow .25s;
+  background:var(--surf2);display:flex;align-items:center;justify-content:center;font-size:20px}
+.nc-th img{width:100%;height:100%;object-fit:cover}
+.nc-nm{font-size:10px;color:rgba(255,255,255,.7);max-width:68px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center}
+.nc.cur .nc-nm{color:var(--pri);font-weight:600}
+#nc-add{flex-shrink:0;width:68px;height:48px;border-radius:7px;
+  border:2px dashed rgba(255,255,255,.22);display:flex;align-items:center;
+  justify-content:center;font-size:20px;color:rgba(255,255,255,.38);
+  cursor:pointer;transition:var(--tr)}
+#nc-add:hover{border-color:var(--pri);color:var(--pri);transform:translateY(-4px)}
+
+/* ── MODAL ────────────────────────────────────────── */
+.mbg{position:fixed;inset:0;background:rgba(0,0,0,.65);backdrop-filter:blur(5px);
+  z-index:1000;display:flex;align-items:center;justify-content:center;
+  padding:18px;opacity:0;pointer-events:none;transition:opacity .25s ease}
+.mbg.on{opacity:1;pointer-events:auto}
+.modal{background:var(--panel);border:1px solid var(--bdr);border-radius:14px;
+  width:100%;max-width:460px;max-height:88vh;overflow-y:auto;
+  transform:scale(.94) translateY(10px);transition:transform .25s ease;
+  box-shadow:0 20px 60px rgba(0,0,0,.6)}
+.mbg.on .modal{transform:scale(1) translateY(0)}
+.mhead{padding:16px 18px 12px;border-bottom:1px solid var(--bdr);
+  display:flex;align-items:center;gap:9px}
+.mttl{flex:1;font-size:15px;font-weight:600}
+.mx{background:var(--surf);border:none;color:var(--dim);width:26px;height:26px;
+  border-radius:50%;cursor:pointer;font-size:13px;display:flex;align-items:center;
+  justify-content:center;transition:var(--tr)}
+.mx:hover{background:var(--surf2);color:var(--txt)}
+.mbody{padding:18px}
+.mfoot{padding:12px 18px;border-top:1px solid var(--bdr);
+  display:flex;gap:8px;justify-content:flex-end}
+
+/* ── RADIO GROUP ──────────────────────────────────── */
+.rg{display:flex;border:1px solid var(--bdr);border-radius:var(--r);overflow:hidden;margin-top:5px}
+.ro{flex:1;text-align:center;padding:7px 4px;font-size:12px;cursor:pointer;
+  background:var(--surf);color:var(--dim);border-right:1px solid var(--bdr);transition:var(--tr)}
+.ro:last-child{border-right:none}
+.ro.on{background:var(--pri);color:#000;font-weight:600}
+
+/* ── ICON PICKER ──────────────────────────────────── */
+.ip-row{display:flex;gap:5px;flex-wrap:wrap;margin-top:5px}
+.ip-pick{width:34px;height:34px;background:var(--surf);border:1px solid var(--bdr);
+  border-radius:7px;display:flex;align-items:center;justify-content:center;
+  font-size:17px;cursor:pointer;transition:var(--tr)}
+.ip-pick.on{border-color:var(--pri);background:rgba(0,212,255,.1)}
+.ip-pick:hover:not(.on){background:var(--surf2)}
+
+/* ── RANGE SLIDER ─────────────────────────────────── */
+input[type=range]{width:100%;accent-color:var(--pri);height:4px;margin:4px 0}
+
+/* ── STITCH VFov note ─────────────────────────────── */
+.vfov-row{display:flex;align-items:center;justify-content:space-between;
+  font-size:12px;color:var(--dim);margin-bottom:3px}
+
+/* ── EXPORT QUALITY CARDS ─────────────────────────── */
+.eq-card{display:flex;align-items:flex-start;gap:10px;padding:11px 13px;
+  border-radius:var(--r);border:1px solid var(--bdr);cursor:pointer;
+  transition:var(--tr);background:var(--surf);user-select:none}
+.eq-card:hover:not(.on){background:var(--surf2)}
+.eq-card.on{border-color:var(--pri);background:rgba(0,212,255,.07)}
+.eq-radio{width:16px;height:16px;border-radius:50%;border:2px solid var(--bdr);
+  flex-shrink:0;margin-top:2px;transition:var(--tr);position:relative}
+.eq-card.on .eq-radio{border-color:var(--pri);background:var(--pri)}
+.eq-card.on .eq-radio::after{content:'';position:absolute;top:50%;left:50%;
+  transform:translate(-50%,-50%);width:6px;height:6px;border-radius:50%;background:#000}
+.eq-name{font-size:13px;font-weight:600;margin-bottom:3px}
+.eq-desc{font-size:11px;color:var(--dim);line-height:1.55}
+
+/* ── 拖拽防选中 ───────────────────────────────────── */
+.hs-mk,.tb-ov{-webkit-user-select:none;user-select:none}
+.hs-ring{-webkit-user-drag:none}
+
+/* ── 底部分类标签 ──────────────────────────────────── */
+#bnav{display:flex;flex-direction:column;gap:5px}
+#bnav-cats{display:none;flex-wrap:nowrap;overflow-x:auto;gap:6px;padding:0 2px;
+  scrollbar-width:none}
+#bnav-cats::-webkit-scrollbar{display:none}
+.nc-cat{flex-shrink:0;padding:4px 13px;border-radius:12px;font-size:11px;font-weight:500;
+  cursor:pointer;background:rgba(255,255,255,.1);color:rgba(255,255,255,.7);
+  border:1px solid rgba(255,255,255,.14);transition:.2s ease}
+.nc-cat:hover{background:rgba(255,255,255,.18)}
+.nc-cat.on{background:var(--pri);color:#000;border-color:var(--pri)}
+/* 无分类时场景卡片居中 */
+#bnav-in.centered{justify-content:center}
+</style>
+</head>
+<body>
+<div id="app">
+
+<!-- ═══════════════ LEFT PANEL ═══════════════ -->
+<div id="lp">
+  <div class="lp-head">
+    <div class="lp-logo">⊙ VR 全景编辑器</div>
+  </div>
+  <div class="lp-tabs">
+    <div class="lp-tab on"  data-tab="t-sc">场景</div>
+    <div class="lp-tab"     data-tab="t-hs">指引</div>
+    <div class="lp-tab"     data-tab="t-tb">文字</div>
+    <div class="lp-tab"     data-tab="t-cfg">设置</div>
+  </div>
+  <div class="lp-body">
+
+    <!-- SCENES TAB -->
+    <div class="tab on" id="t-sc">
+      <div class="sec">场景列表</div>
+      <div id="sc-list"></div>
+      <button class="btn btn-s btn-full" id="btn-add-sc" style="margin-top:4px">＋ 新建场景</button>
+      <hr class="div" id="sc-div" style="display:none">
+      <div id="sc-edit" style="display:none">
+        <div class="sec">当前场景设置</div>
+        <div class="fg">
+          <label class="fl">场景名称</label>
+          <input class="fi" id="sc-name" placeholder="输入场景名称" maxlength="20">
+        </div>
+        <div class="fg">
+          <label class="fl">场景头像</label>
+          <div class="uz" id="av-uz" style="padding:12px">
+            <div class="uz-ic">🖼️</div>
+            <div class="uz-tx">点击上传头像图片</div>
+            <img class="uz-prev" id="av-prev">
+          </div>
+          <input type="file" id="av-fi" accept="image/*" style="display:none">
+        </div>
+        <div class="tog-row">
+          <span class="tog-lbl">在底部导航栏中隐藏</span>
+          <div class="tog" id="sc-hide-tog"></div>
+        </div>
+        <div class="fg" style="margin-top:10px">
+          <label class="fl">所属分类（可选，用于底部导航分组）</label>
+          <input class="fi" id="sc-category" placeholder="如：1楼 / 户外区 / 园区" maxlength="16">
+        </div>
+        <div class="tip" style="margin-top:8px">隐藏后该场景不出现在底部导航，仍可通过指引跳转访问</div>
+      </div>
+      <hr class="div" id="sc-div2" style="display:none">
+      <div id="sc-img" style="display:none">
+        <div class="sec">全景图上传</div>
+        <div class="uz" id="main-uz">
+          <div class="uz-ic">🌐</div>
+          <div class="uz-tx">拖拽或点击上传<br>360° 全景主图</div>
+          <img class="uz-prev" id="main-prev">
+        </div>
+        <input type="file" id="main-fi" accept="image/*" style="display:none">
+
+        <div style="margin-top:12px">
+          <div class="sec" style="margin-top:0">垂直补充图（可选，减少极点畸变）</div>
+          <div class="fg">
+            <label class="fl">顶部补充图（天花板 / 天空）</label>
+            <div class="uz" id="top-uz" style="padding:10px">
+              <div class="uz-ic">⬆️</div>
+              <div class="uz-tx">点击上传顶部图</div>
+              <img class="uz-prev" id="top-prev">
+            </div>
+            <input type="file" id="top-fi" accept="image/*" style="display:none">
+          </div>
+          <div class="fg">
+            <label class="fl">底部补充图（地面 / 地板）</label>
+            <div class="uz" id="bot-uz" style="padding:10px">
+              <div class="uz-ic">⬇️</div>
+              <div class="uz-tx">点击上传底部图</div>
+              <img class="uz-prev" id="bot-prev">
+            </div>
+            <input type="file" id="bot-fi" accept="image/*" style="display:none">
+          </div>
+          <div class="fg">
+            <div class="vfov-row">
+              <span>主图垂直视角（VFov）</span>
+              <span id="vfov-val">90°</span>
+            </div>
+            <input type="range" id="vfov-sl" min="45" max="160" value="90" step="5">
+            <div class="tip">手机全景约90-120°，专业相机约60-90°，2:1标准图填160°</div>
+          </div>
+        </div>
+        <button class="btn btn-p btn-full" id="btn-stitch" style="margin-top:8px">⚙ 合成并应用全景图</button>
+      </div>
+    </div>
+
+    <!-- HOTSPOTS TAB -->
+    <div class="tab" id="t-hs">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <div class="sec" style="margin:0">指引列表</div>
+        <button class="btn btn-p btn-sm" id="btn-add-hs">＋ 添加指引</button>
+      </div>
+      <div id="hs-list"></div>
+      <div class="tip">点击"添加指引"后填写内容，支持场景跳转、信息弹窗、图片展示</div>
+    </div>
+
+    <!-- TEXTBOX TAB -->
+    <div class="tab" id="t-tb">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <div class="sec" style="margin:0">文字框列表</div>
+        <button class="btn btn-p btn-sm" id="btn-add-tb">＋ 添加文字</button>
+      </div>
+      <div id="tb-list"></div>
+      <div class="tip">点击"添加文字"后在场景中点击位置放置悬浮文字面板</div>
+    </div>
+
+    <!-- SETTINGS TAB -->
+    <div class="tab" id="t-cfg">
+      <div class="sec">视图控制</div>
+      <div class="fg"><button class="btn btn-s btn-full" id="btn-reset">↺ 重置视角</button></div>
+      <div class="fg"><button class="btn btn-s btn-full" id="btn-fs">⛶ 全屏模式</button></div>
+      <hr class="div">
+      <div class="sec">工程文件（含图片，可继续编辑）</div>
+      <div class="fg"><button class="btn btn-p btn-full" id="btn-save-proj">💼 保存工程（.vrproj）</button></div>
+      <div class="fg">
+        <button class="btn btn-s btn-full" id="btn-open-proj">📁 打开工程文件</button>
+        <input type="file" id="open-proj-fi" accept=".vrproj,.json" style="display:none">
+      </div>
+      <div class="tip" style="margin-bottom:10px">类似 PS 源文件：保留全部场景、图片、热点与文字。再次打开可继续编辑。快捷键 Ctrl+S</div>
+      <hr class="div">
+      <div class="sec">数据管理</div>
+      <div class="fg"><button class="btn btn-p btn-full" id="btn-export-viewer">📦 导出交付版 HTML</button></div>
+      <div class="tip" style="margin-bottom:10px">导出独立 HTML 文件，包含所有场景、热点与文字，无编辑工具，可直接分享给访客</div>
+      <div class="fg"><button class="btn btn-s btn-full" id="btn-export">💾 导出场景数据（不含图片）</button></div>
+      <div class="fg">
+        <button class="btn btn-s btn-full" id="btn-import">📂 导入场景数据</button>
+        <input type="file" id="import-fi" accept=".json" style="display:none">
+      </div>
+      <hr class="div">
+      <div class="sec">使用说明</div>
+      <div class="tip">
+        • 鼠标拖拽旋转视角，滚轮缩放<br>
+        • 点击底部场景卡片切换场景<br>
+        • 点击顶部「编辑」进入编辑模式<br>
+        • 编辑模式下悬停热点/文字可编辑<br>
+        • 推荐使用 4096×2048 全景图<br>
+        • 补充图可填充天花板和地面区域
+      </div>
+    </div>
+
+  </div><!-- lp-body -->
+</div><!-- lp -->
+
+<!-- ═══════════════ VIEWER ═══════════════ -->
+<div id="vw">
+  <div id="cc"></div>
+  <div id="ov"></div>
+  <div id="tr-ov"></div>
+  <div id="save-toast"></div>
+
+  <!-- Hint -->
+  <div id="hint">
+    <div class="hint-ic">🌐</div>
+    <div class="hint-tx">VR 全景编辑器</div>
+    <div class="hint-sub">在左侧"场景"标签上传全景图片</div>
+  </div>
+
+  <!-- Info Popup -->
+  <div id="ip-bg"></div>
+  <div id="ip">
+    <div class="ip-head">
+      <div class="ip-ic" id="ip-ic">ℹ️</div>
+      <div class="ip-ttl" id="ip-ttl">信息</div>
+      <button class="ip-x" id="ip-x">✕</button>
+    </div>
+    <div id="ip-img-wrap" style="display:none">
+      <img id="ip-img" src="">
+    </div>
+    <div class="ip-body" id="ip-body"></div>
+  </div>
+
+  <!-- Top Bar -->
+  <div id="topbar">
+    <button class="tbbtn" id="btn-tog-lp">☰</button>
+    <div class="tb-title-main" id="scene-title">—</div>
+    <div style="display:flex;gap:7px">
+      <button class="tbbtn" id="btn-em">✏️ 编辑</button>
+      <button class="tbbtn" id="btn-rv">↺</button>
+      <button class="tbbtn" id="btn-fstb">⛶</button>
+    </div>
+  </div>
+
+  <!-- Edit Banner -->
+  <div id="ebanner">
+    <span id="eban-tx">点击场景中的位置</span>
+    <button class="eban-cancel" id="eban-cancel">取消</button>
+  </div>
+
+  <!-- Bottom Nav -->
+  <div id="bnav">
+    <div id="bnav-cats"></div>
+    <div id="bnav-in">
+      <div id="nc-add" title="新建场景">＋</div>
+    </div>
+  </div>
+</div><!-- vw -->
+</div><!-- app -->
+
+<!-- ═══════════════ EXPORT QUALITY MODAL ═══════════════ -->
+<div class="mbg" id="m-export">
+  <div class="modal" style="max-width:400px">
+    <div class="mhead">
+      <div class="mttl">📦 导出交付版 HTML</div>
+      <button class="mx" data-close="m-export">✕</button>
+    </div>
+    <div class="mbody">
+      <div style="font-size:12px;color:var(--dim);margin-bottom:14px">
+        选择全景图画质，画质越高文件越大。导出后可直接用浏览器打开分享。
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px" id="eq-cards">
+        <div class="eq-card" data-q="hd">
+          <div class="eq-radio"></div>
+          <div>
+            <div class="eq-name">🎨 高清版</div>
+            <div class="eq-desc">4096 × 2048 px · JPEG 88% · 原始最高画质<br>预计每场景 3–10 MB（取决于图片内容）</div>
+          </div>
+        </div>
+        <div class="eq-card on" data-q="std">
+          <div class="eq-radio"></div>
+          <div>
+            <div class="eq-name">⭐ 标准版 <span style="font-size:10px;color:var(--pri);font-weight:400">推荐</span></div>
+            <div class="eq-desc">2048 × 1024 px · JPEG 82% · 清晰流畅，均衡之选<br>预计每场景 0.5–2 MB</div>
+          </div>
+        </div>
+        <div class="eq-card" data-q="lite">
+          <div class="eq-radio"></div>
+          <div>
+            <div class="eq-name">📦 轻量版</div>
+            <div class="eq-desc">1024 × 512 px · JPEG 75% · 极速加载，便于分享<br>预计每场景 0.1–0.4 MB</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="mfoot">
+      <button class="btn btn-s" data-close="m-export">取消</button>
+      <button class="btn btn-p" id="eq-confirm">开始导出</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ HOTSPOT MODAL ═══════════════ -->
+<div class="mbg" id="m-hs">
+  <div class="modal">
+    <div class="mhead">
+      <div class="mttl" id="m-hs-ttl">添加热点</div>
+      <button class="mx" data-close="m-hs">✕</button>
+    </div>
+    <div class="mbody">
+      <div class="fg">
+        <label class="fl">热点标签</label>
+        <input class="fi" id="hs-lbl" placeholder="如：咖啡吧、出口、洗手间…" maxlength="24">
+      </div>
+      <div class="fg">
+        <label class="fl">类型</label>
+        <div class="rg" id="hs-type-rg">
+          <div class="ro on" data-v="info">📋 信息</div>
+          <div class="ro" data-v="img">🖼️ 图片</div>
+          <div class="ro" data-v="scene">🔀 跳转</div>
+        </div>
+      </div>
+      <div id="hs-info-sec">
+        <div class="fg">
+          <label class="fl">信息标题</label>
+          <input class="fi" id="hs-ititle" placeholder="如：咖啡吧饮品菜单">
+        </div>
+        <div class="fg">
+          <label class="fl">信息内容</label>
+          <textarea class="fi fta" id="hs-icont" placeholder="输入详细信息，支持换行…"></textarea>
+        </div>
+      </div>
+      <div id="hs-sc-sec" style="display:none">
+        <div class="fg">
+          <label class="fl">目标场景</label>
+          <select class="fi" id="hs-tgt-sc">
+            <option value="">-- 选择场景 --</option>
+          </select>
+        </div>
+      </div>
+      <!-- 图片展示类型上传区 -->
+      <div id="hs-img-sec" style="display:none">
+        <div class="fg">
+          <label class="fl">展示图片（普通照片，非全景图）</label>
+          <div class="uz" id="hs-img-uz" style="padding:12px">
+            <div class="uz-ic">🖼️</div>
+            <div class="uz-tx">点击或拖拽上传图片<br><span style="font-size:10px">支持 JPG / PNG，任意尺寸</span></div>
+            <img class="uz-prev" id="hs-img-prev">
+          </div>
+          <input type="file" id="hs-img-fi" accept="image/*" style="display:none">
+        </div>
+        <div class="fg">
+          <label class="fl">图片说明（可选）</label>
+          <textarea class="fi fta" id="hs-img-desc" placeholder="图片下方的说明文字…" style="min-height:56px"></textarea>
+        </div>
+      </div>
+      <div class="fg">
+        <label class="fl">图标</label>
+        <div class="ip-row" id="hs-icon-row"></div>
+      </div>
+    </div>
+    <div class="mfoot">
+      <button class="btn btn-s" id="hs-relocate" title="关闭弹窗后点击全景图选择位置">📍 重新定位</button>
+      <button class="btn btn-s" data-close="m-hs">取消</button>
+      <button class="btn btn-p" id="hs-save">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ TEXTBOX MODAL ═══════════════ -->
+<div class="mbg" id="m-tb">
+  <div class="modal">
+    <div class="mhead">
+      <div class="mttl" id="m-tb-ttl">添加文字框</div>
+      <button class="mx" data-close="m-tb">✕</button>
+    </div>
+    <div class="mbody">
+      <div class="fg">
+        <label class="fl">标题（可选）</label>
+        <input class="fi" id="tb-ttl-in" placeholder="文字框标题">
+      </div>
+      <div class="fg">
+        <label class="fl">内容</label>
+        <textarea class="fi fta" id="tb-cont-in" placeholder="输入文字内容，支持换行…" style="min-height:110px"></textarea>
+      </div>
+    </div>
+    <div class="mfoot">
+      <button class="btn btn-s" id="tb-relocate" title="关闭弹窗后点击全景图选择位置">📍 重新定位</button>
+      <button class="btn btn-s" data-close="m-tb">取消</button>
+      <button class="btn btn-p" id="tb-save">保存</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+'use strict';
+// ════════════════════════════════════════════════════════
+// DATA MODEL
+// ════════════════════════════════════════════════════════
+let scenes = [];
+let curId  = null;
+let _uid   = 1;
+const uid  = p => p + '_' + (_uid++);
+
+function mkScene(name) {
+  return {
+    id: uid('sc'), name: name || `场景${scenes.length + 1}`,
+    avatar: null, equirect: null,
+    category: '',   // 所属分类（空=不分类）
+    pending: { main: null, top: null, bot: null, vfov: 90 },
+    hotspots: [], textBoxes: [],
+    hidden: false, defLon: 0, defLat: 0
+  };
+}
+const curScene = () => scenes.find(s => s.id === curId) || null;
+
+// ════════════════════════════════════════════════════════
+// THREE.JS
+// ════════════════════════════════════════════════════════
+let threeScene, cam, renderer, sphere;
+let lon = 0, lat = 0;
+let pDown = false, pMoved = false;
+let pX0 = 0, pY0 = 0, lon0 = 0, lat0 = 0;
+
+// 预分配，避免每帧 new Vector3 产生 GC 压力
+const _pv  = new THREE.Vector3();
+const _cd  = new THREE.Vector3();
+// 相机上帧状态，用于按需更新 overlay
+let _oLon = null, _oLat = null, _oFov = null;
+let _ccEl = null; // 缓存 canvas 容器元素
+
+function initThree() {
+  const cc = document.getElementById('cc');
+  threeScene = new THREE.Scene();
+  cam = new THREE.PerspectiveCamera(75, cc.clientWidth / cc.clientHeight, 0.1, 1000);
+  cam.position.set(0, 0, 0.01);
+
+  renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+  renderer.setSize(cc.clientWidth, cc.clientHeight);
+  cc.appendChild(renderer.domElement);
+  _ccEl = cc; // 缓存
+
+  const geo = new THREE.SphereGeometry(500, 72, 48);
+  geo.scale(-1, 1, 1);
+  // DoubleSide: raycaster 跳过背面剔除检测，使 screenToLL() 能从球体内部正确命中
+  sphere = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: 0x111116, side: THREE.DoubleSide }));
+  threeScene.add(sphere);
+
+  renderer.domElement.addEventListener('pointerdown', onPD);
+  renderer.domElement.addEventListener('pointermove', onPM);
+  renderer.domElement.addEventListener('pointerup',   onPU);
+  renderer.domElement.addEventListener('click',       onCC);
+  renderer.domElement.addEventListener('wheel',       onWH, { passive: false });
+  window.addEventListener('resize', onResize);
+  loop();
+}
+
+function loop() {
+  requestAnimationFrame(loop);
+  lat = Math.max(-85, Math.min(85, lat));
+  const phi   = THREE.MathUtils.degToRad(90 - lat);
+  const theta = THREE.MathUtils.degToRad(lon);
+  cam.lookAt(
+    500 * Math.sin(phi) * Math.cos(theta),
+    500 * Math.cos(phi),
+    500 * Math.sin(phi) * Math.sin(theta)
+  );
+  renderer.render(threeScene, cam);
+  // 仅当相机视角确实变化时才更新 DOM overlay，避免 60fps DOM 操作造成卡顿
+  if (lon !== _oLon || lat !== _oLat || cam.fov !== _oFov) {
+    updateOverlays();
+    _oLon = lon; _oLat = lat; _oFov = cam.fov;
+  }
+}
+
+function onPD(e) {
+  pDown = true; pMoved = false;
+  pX0 = e.clientX; pY0 = e.clientY; lon0 = lon; lat0 = lat;
+  renderer.domElement.setPointerCapture(e.pointerId);
+}
+function onPM(e) {
+  if (!pDown) return;
+  const dx = e.clientX - pX0, dy = e.clientY - pY0;
+  if (Math.abs(dx) > 8 || Math.abs(dy) > 8) pMoved = true;  // 8px 防误触
+  lon = lon0 - dx * 0.13;
+  lat = lat0 + dy * 0.13;
+}
+function onPU() { pDown = false; }
+function onWH(e) {
+  e.preventDefault();
+  cam.fov = THREE.MathUtils.clamp(cam.fov + e.deltaY * 0.04, 18, 100);
+  cam.updateProjectionMatrix();
+}
+function onResize() {
+  _ccEl = document.getElementById('cc');
+  cam.aspect = _ccEl.clientWidth / _ccEl.clientHeight;
+  cam.updateProjectionMatrix();
+  renderer.setSize(_ccEl.clientWidth, _ccEl.clientHeight);
+  _oLon = null; // 强制下帧刷新 overlay 位置
+}
+function resetView() {
+  const s = curScene();
+  lon = s ? s.defLon : 0; lat = s ? s.defLat : 0;
+  cam.fov = 75; cam.updateProjectionMatrix();
+}
+function loadTex(url) {
+  new THREE.TextureLoader().load(url, tex => {
+    if (sphere.material.map) sphere.material.map.dispose();
+    sphere.material.map = tex;
+    sphere.material.color.set(0xffffff);
+    sphere.material.needsUpdate = true;
+    document.getElementById('hint').classList.add('hid');
+  });
+}
+
+// ════════════════════════════════════════════════════════
+// SCREEN ↔ WORLD
+// ════════════════════════════════════════════════════════
+function screenToLL(cx, cy) {
+  const rect = renderer.domElement.getBoundingClientRect();
+  const ndc  = new THREE.Vector2(
+    ((cx - rect.left) / rect.width) * 2 - 1,
+    -((cy - rect.top) / rect.height) * 2 + 1
+  );
+  const rc = new THREE.Raycaster();
+  rc.setFromCamera(ndc, cam);
+  const hits = rc.intersectObject(sphere);
+  if (!hits.length) return null;
+  const p = hits[0].point, r = p.length();
+  return {
+    lon: Math.atan2(p.z, p.x) * 180 / Math.PI,
+    lat: Math.asin(Math.max(-1, Math.min(1, p.y / r))) * 180 / Math.PI
+  };
+}
+function llToScreen(lon2, lat2) {
+  const phi   = THREE.MathUtils.degToRad(90 - lat2);
+  const theta = THREE.MathUtils.degToRad(lon2);
+  // 复用预分配对象，避免 GC
+  _pv.set(
+    500 * Math.sin(phi) * Math.cos(theta),
+    500 * Math.cos(phi),
+    500 * Math.sin(phi) * Math.sin(theta)
+  );
+  cam.getWorldDirection(_cd);
+  const dot = _cd.dot(_pv) / 500; // _cd 已归一化，_pv 长度=500
+  _pv.project(cam);
+  return {
+    x: (_pv.x + 1) / 2 * _ccEl.clientWidth,
+    y: (-_pv.y + 1) / 2 * _ccEl.clientHeight,
+    vis: dot > 0.12
+  };
+}
+
+// ════════════════════════════════════════════════════════
+// SCENE MANAGEMENT
+// ════════════════════════════════════════════════════════
+function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+async function switchScene(id, anim = true) {
+  if (id === curId && scenes.length) { refreshPanelForScene(); return; }
+  const ov = document.getElementById('tr-ov');
+  if (anim && curId) { ov.classList.add('on'); await delay(350); }
+  curId = id;
+  const s = curScene();
+  if (s) {
+    if (s.equirect) loadTex(s.equirect);
+    else {
+      if (sphere.material.map) sphere.material.map.dispose();
+      sphere.material.map = null; sphere.material.color.set(0x111116);
+      sphere.material.needsUpdate = true;
+      document.getElementById('hint').classList.remove('hid');
+    }
+    lon = s.defLon || 0; lat = s.defLat || 0;
+    cam.fov = 75; cam.updateProjectionMatrix();
+    document.getElementById('scene-title').textContent = s.name;
+  }
+  refreshPanelForScene();
+  renderOverlay();
+  renderBottomNav();
+  renderHsList(); renderTbList();
+  if (anim) { ov.classList.remove('on'); }
+}
+
+function addScene() {
+  const s = mkScene(); scenes.push(s);
+  renderSceneList(); renderBottomNav();
+  switchScene(s.id, false);
+  switchTab('t-sc');
+}
+function deleteScene(id) {
+  if (scenes.length <= 1) { alert('至少保留一个场景'); return; }
+  scenes = scenes.filter(s => s.id !== id);
+  if (curId === id) switchScene(scenes[0].id);
+  else { renderSceneList(); renderBottomNav(); }
+}
+
+// ════════════════════════════════════════════════════════
+// PANORAMA STITCHING
+// ════════════════════════════════════════════════════════
+function loadImg(url) {
+  return new Promise((res, rej) => {
+    const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = url;
+  });
+}
+
+// 压缩图片：缩放到最大尺寸 + 转为 JPEG
+// PNG 大图转 JPEG 可减少 80-95% 体积，无损转 JPEG q0.85 几乎看不出差异
+async function compressImg(dataUrl, maxW, maxH, quality) {
+  if (!dataUrl) return null;
+  const img = await loadImg(dataUrl);
+  let w = img.naturalWidth, h = img.naturalHeight;
+  const needsResize = w > maxW || h > maxH;
+  // 如果已经是合适尺寸的 JPEG 且质量参数较高，直接返回（避免二次损耗）
+  if (!needsResize && dataUrl.startsWith('data:image/jpeg') && quality >= 0.85) return dataUrl;
+  if (needsResize) {
+    const r = Math.min(maxW / w, maxH / h);
+    w = Math.round(w * r); h = Math.round(h * r);
+  }
+  const cvs = document.createElement('canvas');
+  cvs.width = w; cvs.height = h;
+  cvs.getContext('2d').drawImage(img, 0, 0, w, h);
+  return cvs.toDataURL('image/jpeg', quality);
+}
+async function stitchApply() {
+  const s = curScene();
+  if (!s || !s.pending.main) { alert('请先上传主全景图'); return; }
+  const btn = document.getElementById('btn-stitch');
+  btn.disabled = true; btn.textContent = '⏳ 处理中…';
+  try {
+    const W = 4096, H = 2048;
+    const mainImg = await loadImg(s.pending.main);
+    const topImg  = s.pending.top ? await loadImg(s.pending.top) : null;
+    const botImg  = s.pending.bot ? await loadImg(s.pending.bot) : null;
+    const vfov    = s.pending.vfov;
+
+    const cvs = document.createElement('canvas');
+    cvs.width = W; cvs.height = H;
+    const ctx = cvs.getContext('2d');
+    ctx.fillStyle = '#111'; ctx.fillRect(0, 0, W, H);
+
+    // main panorama vertical placement in equirectangular canvas
+    const mTop = Math.round(((90 - vfov / 2) / 180) * H);
+    const mBot = Math.round(((90 + vfov / 2) / 180) * H);
+    const bz   = Math.max(40, Math.round(H * 0.035)); // blend zone
+
+    // ① Draw main panorama
+    ctx.drawImage(mainImg, 0, mTop, W, mBot - mTop);
+
+    if (topImg || botImg) {
+      // ② Fade edges of main for blending
+      if (mTop > 0) {
+        const g = ctx.createLinearGradient(0, mTop, 0, mTop + bz);
+        g.addColorStop(0, 'rgba(0,0,0,1)'); g.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.globalCompositeOperation = 'destination-out';
+        ctx.fillStyle = g; ctx.fillRect(0, mTop, W, bz);
+      }
+      if (mBot < H) {
+        const g = ctx.createLinearGradient(0, mBot - bz, 0, mBot);
+        g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(0,0,0,1)');
+        ctx.globalCompositeOperation = 'destination-out';
+        ctx.fillStyle = g; ctx.fillRect(0, mBot - bz, W, bz);
+      }
+      ctx.globalCompositeOperation = 'source-over';
+
+      // ③ Draw supplementals underneath
+      ctx.globalCompositeOperation = 'destination-over';
+      if (topImg) ctx.drawImage(topImg, 0, 0, W, Math.max(mTop + bz, H * 0.3));
+      if (botImg) ctx.drawImage(botImg, 0, Math.min(mBot - bz, H * 0.7), W, H - Math.min(mBot - bz, H * 0.7));
+      ctx.globalCompositeOperation = 'source-over';
+    }
+
+    const url = cvs.toDataURL('image/jpeg', 0.85); // 0.85 视觉无损但比 0.92 小约 30%
+    s.equirect = url;
+    if (!s.avatar) s.avatar = url;
+    loadTex(url);
+    renderSceneList(); renderBottomNav();
+    btn.textContent = '✓ 已合成并应用';
+    setTimeout(() => { btn.disabled = false; btn.textContent = '⚙ 合成并应用全景图'; }, 2800);
+  } catch (err) {
+    console.error(err); alert('合成失败，请检查图片');
+    btn.disabled = false; btn.textContent = '⚙ 合成并应用全景图';
+  }
+}
+
+// ════════════════════════════════════════════════════════
+// EDIT PLACE MODE
+// ════════════════════════════════════════════════════════
+let placeMode = null;   // null | 'hs' | 'tb'
+let pendingHS = null, pendingTB = null;
+let _precisePlace = false; // 在已打开弹窗基础上进行精确定位
+
+function startPlace(mode) {
+  placeMode = mode;
+  pMoved = false;
+  const ban = document.getElementById('ebanner');
+  document.getElementById('eban-tx').textContent =
+    mode === 'hs' ? '📍 点击全景图选择热点位置' : '📍 点击全景图选择文字框位置';
+  ban.classList.add('on');
+  renderer.domElement.style.cursor = 'crosshair';
+}
+function cancelPlace() {
+  placeMode = null; _precisePlace = false;
+  document.getElementById('ebanner').classList.remove('on');
+  renderer.domElement.style.cursor = '';
+}
+
+function onCC(e) {
+  if (pMoved && !placeMode) { pMoved = false; return; }
+  pMoved = false;
+  if (!placeMode) return;
+  const ll = screenToLL(e.clientX, e.clientY);
+  if (!ll) { return; } // 点击在全景图区域外，忽略
+  if (placeMode === 'hs') {
+    if (_precisePlace && pendingHS) {
+      // 精确重定位：更新位置后重新打开弹窗
+      pendingHS.lon = ll.lon; pendingHS.lat = ll.lat;
+      cancelPlace();
+      openHsModal(pendingHS, _preciseIsNew);
+    } else {
+      pendingHS = { id: uid('hs'), lon: ll.lon, lat: ll.lat, label: '', type: 'info',
+                    icon: '📍', infoTitle: '', infoCont: '', targetScene: '' };
+      cancelPlace(); openHsModal(pendingHS, true);
+    }
+  } else {
+    if (_precisePlace && pendingTB) {
+      pendingTB.lon = ll.lon; pendingTB.lat = ll.lat;
+      cancelPlace();
+      openTbModal(pendingTB, _preciseIsNew);
+    } else {
+      pendingTB = { id: uid('tb'), lon: ll.lon, lat: ll.lat, title: '', content: '' };
+      cancelPlace(); openTbModal(pendingTB, true);
+    }
+  }
+}
+let _preciseIsNew = false;
+
+// ════════════════════════════════════════════════════════
+// OVERLAY RENDERING (hotspots + textboxes)
+// ════════════════════════════════════════════════════════
+let editMode = false;
+// 拖拽状态
+let isDraggingOverlay = false;
+let _dragging = null;   // { type:'hs'|'tb', id }
+let _dragMoved = false;
+
+function renderOverlay() {
+  const ov = document.getElementById('ov');
+  ov.innerHTML = '';
+  _oLon = null;
+  const s = curScene(); if (!s) return;
+
+  s.hotspots.forEach(hs => {
+    const el = document.createElement('div');
+    el.className = 'hs-mk' + (editMode ? ' em' : '');
+    el.id = 'hs_' + hs.id;
+    const defIcon = hs.type === 'img' ? '🖼️' : hs.type === 'scene' ? '🔀' : 'ℹ️';
+    el.innerHTML = `
+      ${editMode ? `<div class="hs-ebtns">
+        <button class="hs-ebtn" onclick="editHs('${hs.id}')">编辑</button>
+        <button class="hs-ebtn del" onclick="delHs('${hs.id}')">删除</button>
+      </div>` : ''}
+      <div class="hs-ring tp-${hs.type}">${hs.icon || defIcon}</div>
+      <div class="hs-lbl">${hs.label}</div>`;
+
+    // 点击：编辑/预览模式均可触发（用 _dragMoved 区分拖拽和点击）
+    el.addEventListener('click', ev => {
+      ev.stopPropagation();
+      if (_dragMoved) { _dragMoved = false; return; }
+      handleHsClick(hs);
+    });
+
+    // 编辑模式：拖拽重定位
+    if (editMode) {
+      const ring = el.querySelector('.hs-ring');
+      ring.addEventListener('pointerdown', ev => {
+        if (ev.target.closest('.hs-ebtns')) return;
+        ev.preventDefault();    // 阻止浏览器选中/拖拽图标
+        ev.stopPropagation();
+        isDraggingOverlay = true;
+        _dragging = { type: 'hs', id: hs.id };
+        _dragMoved = false;
+        ring.style.cursor = 'grabbing';
+        el.setPointerCapture(ev.pointerId);
+      });
+      el.addEventListener('pointermove', ev => {
+        if (!isDraggingOverlay || !_dragging || _dragging.id !== hs.id) return;
+        const ll = screenToLL(ev.clientX, ev.clientY);
+        if (!ll) return;
+        _dragMoved = true;
+        hs.lon = ll.lon; hs.lat = ll.lat;
+        _oLon = null; // 下帧刷新位置
+      });
+      el.addEventListener('lostpointercapture', () => {
+        if (_dragging && _dragging.id === hs.id) {
+          isDraggingOverlay = false; _dragging = null;
+          ring.style.cursor = '';
+        }
+      });
+    }
+    ov.appendChild(el);
+  });
+
+  s.textBoxes.forEach(tb => {
+    const el = document.createElement('div');
+    el.className = 'tb-ov' + (editMode ? ' em' : '');
+    el.id = 'tb_' + tb.id;
+    el.innerHTML = `
+      ${editMode ? `<div class="tb-ebtns">
+        <button class="hs-ebtn" onclick="editTb('${tb.id}')">编辑</button>
+        <button class="hs-ebtn del" onclick="delTb('${tb.id}')">删除</button>
+      </div>` : ''}
+      <div class="tb-panel">
+        ${tb.title ? `<div class="tb-title">${tb.title}</div>` : ''}
+        <div class="tb-cont">${tb.content || ''}</div>
+      </div>`;
+
+    // 编辑模式：拖拽重定位
+    if (editMode) {
+      const panel = el.querySelector('.tb-panel');
+      panel.addEventListener('pointerdown', ev => {
+        if (ev.target.closest('.tb-ebtns')) return;
+        ev.preventDefault();    // 阻止浏览器选中
+        ev.stopPropagation();
+        isDraggingOverlay = true;
+        _dragging = { type: 'tb', id: tb.id };
+        _dragMoved = false;
+        panel.style.cursor = 'grabbing';
+        el.setPointerCapture(ev.pointerId);
+      });
+      el.addEventListener('pointermove', ev => {
+        if (!isDraggingOverlay || !_dragging || _dragging.id !== tb.id) return;
+        const ll = screenToLL(ev.clientX, ev.clientY);
+        if (!ll) return;
+        _dragMoved = true;
+        tb.lon = ll.lon; tb.lat = ll.lat;
+        _oLon = null;
+      });
+      el.addEventListener('lostpointercapture', () => {
+        if (_dragging && _dragging.id === tb.id) {
+          isDraggingOverlay = false; _dragging = null;
+          panel.style.cursor = '';
+        }
+      });
+    }
+    ov.appendChild(el);
+  });
+}
+
+function updateOverlays() {
+  const s = curScene(); if (!s) return;
+  s.hotspots.forEach(hs => {
+    const el = document.getElementById('hs_' + hs.id); if (!el) return;
+    const p = llToScreen(hs.lon, hs.lat);
+    el.style.left = p.x + 'px'; el.style.top = p.y + 'px';
+    el.style.display = p.vis ? '' : 'none';
+  });
+  s.textBoxes.forEach(tb => {
+    const el = document.getElementById('tb_' + tb.id); if (!el) return;
+    const p = llToScreen(tb.lon, tb.lat);
+    el.style.left = p.x + 'px'; el.style.top = p.y + 'px';
+    el.style.display = p.vis ? '' : 'none';
+  });
+}
+
+// ════════════════════════════════════════════════════════
+// HOTSPOT ACTIONS
+// ════════════════════════════════════════════════════════
+function handleHsClick(hs) {
+  if (hs.type === 'scene') {
+    if (hs.targetScene) switchScene(hs.targetScene);
+  } else if (hs.type === 'img') {
+    showInfoPopup(hs.icon || '🖼️', hs.label, hs.infoCont || '', hs.imgData || null);
+  } else {
+    showInfoPopup(hs.icon || 'ℹ️', hs.infoTitle || hs.label, hs.infoCont, null);
+  }
+}
+function showInfoPopup(icon, title, body, imgData) {
+  document.getElementById('ip-ic').textContent  = icon;
+  document.getElementById('ip-ttl').textContent = title;
+  const bodyEl = document.getElementById('ip-body');
+  bodyEl.textContent = body || '';
+  bodyEl.style.display = body ? '' : 'none';
+  const wrap = document.getElementById('ip-img-wrap');
+  const imgEl = document.getElementById('ip-img');
+  if (imgData) { imgEl.src = imgData; wrap.style.display = ''; }
+  else { wrap.style.display = 'none'; imgEl.src = ''; }
+  document.getElementById('ip-bg').classList.add('on');
+  document.getElementById('ip').classList.add('on');
+}
+function hideInfoPopup() {
+  document.getElementById('ip-bg').classList.remove('on');
+  document.getElementById('ip').classList.remove('on');
+  document.getElementById('ip-img').src = '';
+  document.getElementById('ip-body').style.display = '';
+}
+function editHs(id) {
+  const s = curScene(); if (!s) return;
+  const hs = s.hotspots.find(h => h.id === id); if (!hs) return;
+  openHsModal(hs, false);
+}
+function delHs(id) {
+  const s = curScene(); if (!s) return;
+  s.hotspots = s.hotspots.filter(h => h.id !== id);
+  renderOverlay(); renderHsList();
+}
+function editTb(id) {
+  const s = curScene(); if (!s) return;
+  const tb = s.textBoxes.find(t => t.id === id); if (!tb) return;
+  openTbModal(tb, false);
+}
+function delTb(id) {
+  const s = curScene(); if (!s) return;
+  s.textBoxes = s.textBoxes.filter(t => t.id !== id);
+  renderOverlay(); renderTbList();
+}
+
+// ════════════════════════════════════════════════════════
+// HOTSPOT MODAL
+// ════════════════════════════════════════════════════════
+const ICONS = ['📍','☕','🍽️','🚪','🪑','🖼️','🌿','💡','📞','🚻',
+               '🛗','🅿️','🛒','💰','ℹ️','⭐','🎯','🔑','🏷️','📸',
+               '🌊','🌅','🏠','🎪','🎭','🎨','🍵','🍺','🛁','🎁'];
+let _hsEditing = null, _hsIsNew = false;
+let _hsImgData; // undefined=未改动, null=清除, 'data:...'=新图片
+
+function openHsModal(hs, isNew) {
+  _hsEditing = hs; _hsIsNew = isNew;
+  _hsImgData = undefined;
+  document.getElementById('m-hs-ttl').textContent = isNew ? '添加指引' : '编辑指引';
+  document.getElementById('hs-lbl').value    = hs.label      || '';
+  document.getElementById('hs-ititle').value = hs.infoTitle  || '';
+  document.getElementById('hs-icont').value  = hs.infoCont   || '';
+  document.getElementById('hs-img-desc').value = (hs.type === 'img' ? hs.infoCont : '') || '';
+
+  // 图片预览
+  const imgUz = document.getElementById('hs-img-uz');
+  const imgPrev = document.getElementById('hs-img-prev');
+  if (hs.imgData) { imgPrev.src = hs.imgData; imgUz.classList.add('has'); }
+  else { imgPrev.src = ''; imgUz.classList.remove('has'); }
+
+  // Type radio
+  const type = hs.type || 'info';
+  document.querySelectorAll('#hs-type-rg .ro').forEach(r => r.classList.toggle('on', r.dataset.v === type));
+  document.getElementById('hs-info-sec').style.display = type === 'info'  ? '' : 'none';
+  document.getElementById('hs-sc-sec').style.display   = type === 'scene' ? '' : 'none';
+  document.getElementById('hs-img-sec').style.display  = type === 'img'   ? '' : 'none';
+
+  // Target scene select
+  const sel = document.getElementById('hs-tgt-sc');
+  sel.innerHTML = '<option value="">-- 选择场景 --</option>';
+  scenes.filter(s => s.id !== curId).forEach(s => {
+    const o = document.createElement('option');
+    o.value = s.id; o.textContent = s.name;
+    if (s.id === hs.targetScene) o.selected = true;
+    sel.appendChild(o);
+  });
+
+  // Icon picker
+  const row = document.getElementById('hs-icon-row');
+  row.innerHTML = '';
+  ICONS.forEach(ic => {
+    const d = document.createElement('div');
+    d.className = 'ip-pick' + (ic === (hs.icon || '📍') ? ' on' : '');
+    d.textContent = ic;
+    d.onclick = () => { row.querySelectorAll('.ip-pick').forEach(x => x.classList.remove('on')); d.classList.add('on'); };
+    row.appendChild(d);
+  });
+
+  openModal('m-hs');
+}
+
+document.getElementById('hs-save').addEventListener('click', () => {
+  if (!_hsEditing) return;
+  _hsEditing.label       = document.getElementById('hs-lbl').value.trim() || '热点';
+  _hsEditing.infoTitle   = document.getElementById('hs-ititle').value.trim();
+  _hsEditing.targetScene = document.getElementById('hs-tgt-sc').value;
+  const selIc = document.querySelector('#hs-icon-row .ip-pick.on');
+  _hsEditing.icon = selIc ? selIc.textContent : '📍';
+  // 根据类型分别存储内容和图片
+  if (_hsEditing.type === 'img') {
+    _hsEditing.infoCont = document.getElementById('hs-img-desc').value.trim();
+    if (_hsImgData !== undefined) _hsEditing.imgData = _hsImgData;
+  } else {
+    _hsEditing.infoCont = document.getElementById('hs-icont').value.trim();
+  }
+  if (_hsIsNew) {
+    const s = curScene(); if (s) s.hotspots.push(_hsEditing);
+  }
+  closeModal('m-hs');
+  if (!editMode) { editMode = true; document.getElementById('btn-em').classList.add('on'); }
+  renderOverlay(); renderHsList();
+  switchTab('t-hs');
+});
+
+document.getElementById('hs-type-rg').addEventListener('click', e => {
+  const ro = e.target.closest('.ro'); if (!ro) return;
+  document.querySelectorAll('#hs-type-rg .ro').forEach(r => r.classList.remove('on'));
+  ro.classList.add('on');
+  const v = ro.dataset.v;
+  if (_hsEditing) _hsEditing.type = v;
+  document.getElementById('hs-info-sec').style.display = v === 'info'  ? '' : 'none';
+  document.getElementById('hs-sc-sec').style.display   = v === 'scene' ? '' : 'none';
+  document.getElementById('hs-img-sec').style.display  = v === 'img'   ? '' : 'none';
+});
+
+// ════════════════════════════════════════════════════════
+// TEXTBOX MODAL
+// ════════════════════════════════════════════════════════
+let _tbEditing = null, _tbIsNew = false;
+
+function openTbModal(tb, isNew) {
+  _tbEditing = tb; _tbIsNew = isNew;
+  document.getElementById('m-tb-ttl').textContent     = isNew ? '添加文字框' : '编辑文字框';
+  document.getElementById('tb-ttl-in').value  = tb.title   || '';
+  document.getElementById('tb-cont-in').value = tb.content || '';
+  openModal('m-tb');
+}
+
+document.getElementById('tb-save').addEventListener('click', () => {
+  if (!_tbEditing) return;
+  _tbEditing.title   = document.getElementById('tb-ttl-in').value.trim();
+  _tbEditing.content = document.getElementById('tb-cont-in').value.trim();
+  if (_tbIsNew) {
+    const s = curScene(); if (s) s.textBoxes.push(_tbEditing);
+  }
+  closeModal('m-tb');
+  // 保存后自动进入编辑模式，让文字框立即可见
+  if (!editMode) { editMode = true; document.getElementById('btn-em').classList.add('on'); }
+  renderOverlay(); renderTbList();
+  switchTab('t-tb');
+});
+
+// ════════════════════════════════════════════════════════
+// UI RENDERING
+// ════════════════════════════════════════════════════════
+function renderSceneList() {
+  const el = document.getElementById('sc-list');
+  if (!scenes.length) { el.innerHTML = '<div class="empty"><div class="empty-ic">🎬</div>暂无场景</div>'; return; }
+  el.innerHTML = scenes.map(s => `
+    <div class="sc-item ${s.id === curId ? 'cur' : ''}" onclick="switchScene('${s.id}')">
+      <div class="sc-thumb">
+        ${s.avatar ? `<img src="${s.avatar}" loading="lazy">` : '🌐'}
+      </div>
+      <div class="sc-info">
+        <div class="sc-name">${s.name}</div>
+        <div class="sc-meta">
+          ${s.id === curId ? '<span class="bdg bdg-c">当前</span> ' : ''}
+          ${s.hidden ? '<span class="bdg bdg-h">隐藏</span>' : ''}
+          ${s.category ? '<span class="bdg bdg-h">' + s.category + '</span> ' : ''}
+          ${s.hotspots.length ? s.hotspots.length + '个指引 ' : ''}
+          ${s.textBoxes.length ? s.textBoxes.length + '个文字' : ''}
+        </div>
+      </div>
+      <div class="sc-acts">
+        <button class="ib" onclick="event.stopPropagation();switchScene('${s.id}')" title="切换到此场景">→</button>
+        <button class="ib del" onclick="event.stopPropagation();deleteScene('${s.id}')" title="删除">✕</button>
+      </div>
+    </div>`).join('');
+}
+
+// 当前选中分类（null=全部）
+let _navCat = null;
+
+function mkNavCard(s) {
+  const d = document.createElement('div');
+  d.className = 'nc' + (s.id === curId ? ' cur' : '');
+  d.innerHTML = `<div class="nc-th">${s.avatar ? `<img src="${s.avatar}" loading="lazy">` : '🌐'}</div><div class="nc-nm">${s.name}</div>`;
+  d.addEventListener('click', () => switchScene(s.id));
+  return d;
+}
+
+function renderBottomNav() {
+  const catsEl = document.getElementById('bnav-cats');
+  const cont   = document.getElementById('bnav-in');
+  const addBtn = document.getElementById('nc-add');
+  cont.querySelectorAll('.nc').forEach(e => e.remove());
+  catsEl.innerHTML = '';
+
+  const vis = scenes.filter(s => !s.hidden);
+  // 提取所有有效分类（保留出现顺序，去重）
+  const cats = [];
+  vis.forEach(s => {
+    const c = (s.category || '').trim();
+    if (c && !cats.includes(c)) cats.push(c);
+  });
+
+  if (cats.length > 0) {
+    // 有分类 → 显示分类标签 + 过滤卡片
+    catsEl.style.display = 'flex';
+    cont.classList.remove('centered');
+
+    const makeTab = (label, active) => {
+      const t = document.createElement('div');
+      t.className = 'nc-cat' + (active ? ' on' : '');
+      t.textContent = label;
+      return t;
+    };
+    const allTab = makeTab('全部', _navCat === null);
+    allTab.addEventListener('click', () => { _navCat = null; renderBottomNav(); });
+    catsEl.appendChild(allTab);
+    cats.forEach(cat => {
+      const tab = makeTab(cat, _navCat === cat);
+      tab.addEventListener('click', () => { _navCat = cat; renderBottomNav(); });
+      catsEl.appendChild(tab);
+    });
+
+    const filtered = _navCat === null ? vis : vis.filter(s => (s.category || '').trim() === _navCat);
+    filtered.forEach(s => cont.insertBefore(mkNavCard(s), addBtn));
+  } else {
+    // 无分类 → 平铺居中
+    catsEl.style.display = 'none';
+    cont.classList.add('centered');
+    vis.forEach(s => cont.insertBefore(mkNavCard(s), addBtn));
+  }
+}
+
+function renderHsList() {
+  const el = document.getElementById('hs-list');
+  const s = curScene();
+  if (!s || !s.hotspots.length) {
+    el.innerHTML = '<div class="empty"><div class="empty-ic">📍</div>暂无指引，点击上方按钮添加</div>';
+    return;
+  }
+  el.innerHTML = s.hotspots.map(hs => `
+    <div class="it-entry">
+      <div class="it-ic ${hs.type === 'scene' ? 'sc' : 'inf'}">${hs.icon || 'ℹ️'}</div>
+      <div class="it-lbl">${hs.label}</div>
+      <div class="it-acts">
+        <button class="ib" onclick="editHs('${hs.id}')">✎</button>
+        <button class="ib del" onclick="delHs('${hs.id}')">✕</button>
+      </div>
+    </div>`).join('');
+}
+
+function renderTbList() {
+  const el = document.getElementById('tb-list');
+  const s = curScene();
+  if (!s || !s.textBoxes.length) {
+    el.innerHTML = '<div class="empty"><div class="empty-ic">💬</div>暂无文字框，点击上方按钮添加</div>';
+    return;
+  }
+  el.innerHTML = s.textBoxes.map(tb => `
+    <div class="it-entry">
+      <div class="it-ic tb">T</div>
+      <div class="it-lbl">${tb.title || tb.content || '文字框'}</div>
+      <div class="it-acts">
+        <button class="ib" onclick="editTb('${tb.id}')">✎</button>
+        <button class="ib del" onclick="delTb('${tb.id}')">✕</button>
+      </div>
+    </div>`).join('');
+}
+
+function refreshPanelForScene() {
+  const s = curScene();
+  const hasScene = !!s;
+  document.getElementById('sc-div').style.display  = hasScene ? '' : 'none';
+  document.getElementById('sc-div2').style.display = hasScene ? '' : 'none';
+  document.getElementById('sc-edit').style.display = hasScene ? '' : 'none';
+  document.getElementById('sc-img').style.display  = hasScene ? '' : 'none';
+
+  if (!s) return;
+  document.getElementById('sc-name').value = s.name;
+  document.getElementById('sc-hide-tog').classList.toggle('on', s.hidden);
+  document.getElementById('sc-category').value = s.category || '';
+
+  // Avatar preview
+  const avUz = document.getElementById('av-uz');
+  const avPrev = document.getElementById('av-prev');
+  if (s.avatar) { avPrev.src = s.avatar; avUz.classList.add('has'); }
+  else { avUz.classList.remove('has'); }
+
+  // Main image preview
+  const mainUz = document.getElementById('main-uz');
+  const mainPrev = document.getElementById('main-prev');
+  if (s.pending.main) { mainPrev.src = s.pending.main; mainUz.classList.add('has'); }
+  else if (s.equirect) { mainPrev.src = s.equirect; mainUz.classList.add('has'); }
+  else mainUz.classList.remove('has');
+
+  // Top/bot previews
+  setUzPreview('top-uz', 'top-prev', s.pending.top);
+  setUzPreview('bot-uz', 'bot-prev', s.pending.bot);
+
+  document.getElementById('vfov-sl').value = s.pending.vfov || 90;
+  document.getElementById('vfov-val').textContent = (s.pending.vfov || 90) + '°';
+  document.getElementById('scene-title').textContent = s.name;
+  renderSceneList();
+}
+
+function setUzPreview(uzId, prevId, src) {
+  const uz = document.getElementById(uzId), prev = document.getElementById(prevId);
+  if (src) { prev.src = src; uz.classList.add('has'); }
+  else uz.classList.remove('has');
+}
+
+// ════════════════════════════════════════════════════════
+// MODAL HELPERS
+// ════════════════════════════════════════════════════════
+function openModal(id)  { document.getElementById(id).classList.add('on'); }
+function closeModal(id) { document.getElementById(id).classList.remove('on'); }
+
+document.querySelectorAll('[data-close]').forEach(btn => {
+  btn.addEventListener('click', () => closeModal(btn.dataset.close));
+});
+document.querySelectorAll('.mbg').forEach(bg => {
+  bg.addEventListener('click', e => { if (e.target === bg) closeModal(bg.id); });
+});
+
+// ════════════════════════════════════════════════════════
+// TABS
+// ════════════════════════════════════════════════════════
+function switchTab(id) {
+  document.querySelectorAll('.lp-tab').forEach(t => t.classList.toggle('on', t.dataset.tab === id));
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('on', t.id === id));
+}
+document.querySelectorAll('.lp-tab').forEach(t => {
+  t.addEventListener('click', () => switchTab(t.dataset.tab));
+});
+
+// ════════════════════════════════════════════════════════
+// UPLOAD HELPERS
+// ════════════════════════════════════════════════════════
+function fileToDataURL(file) {
+  return new Promise(res => {
+    const r = new FileReader(); r.onload = e => res(e.target.result); r.readAsDataURL(file);
+  });
+}
+// cOpts: { maxW, maxH, q } — 上传后自动压缩；省略则不压缩
+function bindUpload(zoneId, inputId, onData, previewId, cOpts) {
+  const zone  = document.getElementById(zoneId);
+  const input = document.getElementById(inputId);
+  const prev  = previewId ? document.getElementById(previewId) : null;
+
+  async function handle(f) {
+    if (!f || !f.type.startsWith('image/')) return;
+    let url = await fileToDataURL(f);
+    if (cOpts) url = await compressImg(url, cOpts.maxW, cOpts.maxH, cOpts.q);
+    if (prev) { prev.src = url; zone.classList.add('has'); }
+    onData(url);
+  }
+  zone.addEventListener('click', () => input.click());
+  input.addEventListener('change', async e => {
+    await handle(e.target.files[0]); input.value = '';
+  });
+  zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('dv'); });
+  zone.addEventListener('dragleave', () => zone.classList.remove('dv'));
+  zone.addEventListener('drop', async e => {
+    e.preventDefault(); zone.classList.remove('dv');
+    await handle(e.dataTransfer.files[0]);
+  });
+}
+
+// ════════════════════════════════════════════════════════
+// EXPORT / IMPORT
+// ════════════════════════════════════════════════════════
+function exportData() {
+  const payload = scenes.map(s => ({
+    ...s, equirect: null, avatar: null,
+    pending: { main: null, top: null, bot: null, vfov: s.pending.vfov }
+  }));
+  const blob = new Blob([JSON.stringify({ scenes: payload, curId }, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = 'vr-scenes.json'; a.click();
+}
+function importData(file) {
+  const r = new FileReader();
+  r.onload = e => {
+    try {
+      const data = JSON.parse(e.target.result);
+      scenes = data.scenes || [];
+      curId  = null;
+      const target = data.curId && scenes.find(s => s.id === data.curId) ? data.curId : (scenes[0] && scenes[0].id);
+      renderSceneList(); renderBottomNav();
+      if (target) switchScene(target, false);
+    } catch { alert('导入失败，文件格式不正确'); }
+  };
+  r.readAsText(file);
+}
+
+// ── PROJECT FILE (.vrproj) ──────────────────────────────
+// 类似 PS 源文件：完整保留场景 + 图片 + 热点 + 文字，可重新打开继续编辑
+const PROJ_KIND = 'vr-panorama-project';
+const PROJ_VER  = 1;
+
+function _pad2(n) { return String(n).padStart(2, '0'); }
+function _projTimestamp() {
+  const d = new Date();
+  return `${d.getFullYear()}${_pad2(d.getMonth()+1)}${_pad2(d.getDate())}-${_pad2(d.getHours())}${_pad2(d.getMinutes())}`;
+}
+function _safeFileName(s) {
+  return (s || '未命名').replace(/[\\/:*?"<>|\s]+/g, '_').slice(0, 40);
+}
+
+function saveProject() {
+  if (!scenes.length) { alert('当前没有任何场景可保存'); return; }
+  const project = {
+    _kind:      PROJ_KIND,
+    version:    PROJ_VER,
+    savedAt:    new Date().toISOString(),
+    uidCounter: _uid,
+    curId:      curId,
+    scenes:     scenes   // 完整保留：equirect / avatar / hotspots / textBoxes 全部带上
+  };
+  let json;
+  try {
+    json = JSON.stringify(project);
+  } catch (err) {
+    alert('保存失败：' + (err && err.message ? err.message : err));
+    return;
+  }
+  const sizeMB = (json.length / (1024 * 1024)).toFixed(1);
+  const blob = new Blob([json], { type: 'application/octet-stream' });
+  const a    = document.createElement('a');
+  const firstName = scenes[0] && scenes[0].name;
+  a.href     = URL.createObjectURL(blob);
+  a.download = `VR工程_${_safeFileName(firstName)}_${_projTimestamp()}.vrproj`;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
+  // 轻提示
+  const tip = document.getElementById('save-toast');
+  if (tip) {
+    tip.textContent = `已保存工程文件（${sizeMB} MB）`;
+    tip.classList.add('on');
+    clearTimeout(tip._t);
+    tip._t = setTimeout(() => tip.classList.remove('on'), 2200);
+  }
+}
+
+function openProjectFile(file) {
+  if (!file) return;
+  const r = new FileReader();
+  r.onload = e => {
+    let data;
+    try { data = JSON.parse(e.target.result); }
+    catch { alert('打开失败：文件解析错误，不是合法的 JSON'); return; }
+
+    const isProject = data && data._kind === PROJ_KIND;
+    if (!isProject) {
+      // 兼容旧版「场景数据 JSON」（不含图片）
+      if (!data || !Array.isArray(data.scenes)) {
+        alert('不是有效的 VR 工程文件'); return;
+      }
+      if (!confirm('该文件为旧版「场景数据」（不含图片）。继续加载将需要重新上传图片，是否继续？')) return;
+    }
+
+    if (scenes.length && !confirm('打开工程将覆盖当前编辑内容，是否继续？')) return;
+
+    const list = Array.isArray(data.scenes) ? data.scenes : [];
+    if (!list.length) { alert('工程文件中没有场景数据'); return; }
+
+    // 规范化字段，兼容缺失字段的旧文件
+    scenes = list.map(s => ({
+      id:        s.id || uid('sc'),
+      name:      s.name || '未命名场景',
+      avatar:    s.avatar    || null,
+      equirect:  s.equirect  || null,
+      category:  s.category  || '',
+      pending:   s.pending   || { main: null, top: null, bot: null, vfov: 90 },
+      hotspots:  Array.isArray(s.hotspots)  ? s.hotspots  : [],
+      textBoxes: Array.isArray(s.textBoxes) ? s.textBoxes : [],
+      hidden:    !!s.hidden,
+      defLon:    typeof s.defLon === 'number' ? s.defLon : 0,
+      defLat:    typeof s.defLat === 'number' ? s.defLat : 0
+    }));
+
+    // 重建 _uid，防止后续新增对象与已有 id 冲突
+    let maxN = 0;
+    const scan = id => {
+      if (!id) return;
+      const m = String(id).match(/_(\d+)$/);
+      if (m) { const n = parseInt(m[1], 10); if (n > maxN) maxN = n; }
+    };
+    scenes.forEach(s => {
+      scan(s.id);
+      s.hotspots.forEach(h => scan(h.id));
+      s.textBoxes.forEach(t => scan(t.id));
+    });
+    _uid = Math.max(_uid, maxN + 1, (data.uidCounter | 0) || 1);
+
+    curId = null;
+    const target = (data.curId && scenes.find(s => s.id === data.curId))
+                   ? data.curId : scenes[0].id;
+    renderSceneList(); renderBottomNav();
+    switchScene(target, false);
+  };
+  r.onerror = () => alert('文件读取失败');
+  r.readAsText(file);
+}
+
+// ════════════════════════════════════════════════════════
+// WIRING EVENTS
+// ════════════════════════════════════════════════════════
+// Panel toggle
+document.getElementById('btn-tog-lp').addEventListener('click', () =>
+  document.getElementById('lp').classList.toggle('closed'));
+
+// Edit mode toggle
+document.getElementById('btn-em').addEventListener('click', () => {
+  editMode = !editMode;
+  document.getElementById('btn-em').classList.toggle('on', editMode);
+  renderOverlay();
+  if (!editMode) cancelPlace();
+});
+
+// Reset view
+document.getElementById('btn-rv').addEventListener('click', resetView);
+document.getElementById('btn-reset').addEventListener('click', resetView);
+
+// Fullscreen
+function toggleFS() {
+  if (!document.fullscreenElement) document.getElementById('vw').requestFullscreen();
+  else document.exitFullscreen();
+}
+document.getElementById('btn-fstb').addEventListener('click', toggleFS);
+document.getElementById('btn-fs').addEventListener('click', toggleFS);
+
+// Add scene
+document.getElementById('btn-add-sc').addEventListener('click', addScene);
+document.getElementById('nc-add').addEventListener('click', addScene);
+
+// Add hotspot — 立即打开弹窗，默认放置在当前视角中心
+document.getElementById('btn-add-hs').addEventListener('click', () => {
+  const s = curScene();
+  if (!s) { alert('请先选择一个场景'); return; }
+  pendingHS = { id: uid('hs'), lon: lon, lat: lat, label: '', type: 'info',
+                icon: '📍', infoTitle: '', infoCont: '', targetScene: '' };
+  openHsModal(pendingHS, true);
+});
+// Add textbox — 立即打开弹窗，默认放置在当前视角中心
+document.getElementById('btn-add-tb').addEventListener('click', () => {
+  const s = curScene();
+  if (!s) { alert('请先选择一个场景'); return; }
+  pendingTB = { id: uid('tb'), lon: lon, lat: lat, title: '', content: '' };
+  openTbModal(pendingTB, true);
+});
+
+// Cancel place
+document.getElementById('eban-cancel').addEventListener('click', () => {
+  // 如果是精确定位模式，取消后重新打开弹窗
+  if (_precisePlace) {
+    cancelPlace();
+    if (pendingHS) openHsModal(pendingHS, _preciseIsNew);
+    else if (pendingTB) openTbModal(pendingTB, _preciseIsNew);
+  } else {
+    cancelPlace();
+  }
+});
+
+// 热点弹窗"重新定位"按钮
+document.getElementById('hs-relocate').addEventListener('click', () => {
+  _precisePlace = true;
+  _preciseIsNew = _hsIsNew;
+  closeModal('m-hs');
+  startPlace('hs');
+});
+
+// 文字框弹窗"重新定位"按钮
+document.getElementById('tb-relocate').addEventListener('click', () => {
+  _precisePlace = true;
+  _preciseIsNew = _tbIsNew;
+  closeModal('m-tb');
+  startPlace('tb');
+});
+
+// Escape 键：取消放置 / 关闭弹窗
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { cancelPlace(); hideInfoPopup(); }
+});
+
+// Info popup close
+document.getElementById('ip-x').addEventListener('click', hideInfoPopup);
+document.getElementById('ip-bg').addEventListener('click', hideInfoPopup);
+
+// Scene name input
+document.getElementById('sc-name').addEventListener('input', e => {
+  const s = curScene(); if (!s) return;
+  s.name = e.target.value || '场景';
+  document.getElementById('scene-title').textContent = s.name;
+  renderSceneList(); renderBottomNav();
+});
+
+// Scene hide toggle
+document.getElementById('sc-hide-tog').addEventListener('click', function() {
+  const s = curScene(); if (!s) return;
+  s.hidden = !s.hidden;
+  this.classList.toggle('on', s.hidden);
+  renderSceneList(); renderBottomNav();
+});
+
+// Scene category input
+document.getElementById('sc-category').addEventListener('input', e => {
+  const s = curScene(); if (!s) return;
+  s.category = e.target.value.trim();
+  renderBottomNav(); renderSceneList();
+});
+
+// VFov slider
+document.getElementById('vfov-sl').addEventListener('input', function() {
+  document.getElementById('vfov-val').textContent = this.value + '°';
+  const s = curScene(); if (s) s.pending.vfov = parseInt(this.value);
+});
+
+// Stitch button
+document.getElementById('btn-stitch').addEventListener('click', stitchApply);
+
+// Export / Import
+// 导出按钮改为打开质量选择弹窗
+document.getElementById('btn-export-viewer').addEventListener('click', () => {
+  if (!scenes.some(s => s.equirect)) {
+    alert('请至少为一个场景上传并应用全景图后再导出');
+    return;
+  }
+  openModal('m-export');
+});
+document.getElementById('btn-export').addEventListener('click', exportData);
+document.getElementById('btn-import').addEventListener('click', () =>
+  document.getElementById('import-fi').click());
+document.getElementById('import-fi').addEventListener('change', e => {
+  const f = e.target.files[0]; if (f) { importData(f); e.target.value = ''; }
+});
+
+// Project save / open (.vrproj)
+document.getElementById('btn-save-proj').addEventListener('click', saveProject);
+document.getElementById('btn-open-proj').addEventListener('click', () =>
+  document.getElementById('open-proj-fi').click());
+document.getElementById('open-proj-fi').addEventListener('change', e => {
+  const f = e.target.files[0]; if (f) { openProjectFile(f); e.target.value = ''; }
+});
+// Ctrl+S to save project
+window.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && (e.key === 's' || e.key === 'S')) {
+    e.preventDefault();
+    saveProject();
+  }
+});
+
+// Avatar — 压缩到缩略图尺寸，只作展示用
+bindUpload('av-uz', 'av-fi', url => {
+  const s = curScene(); if (!s) return;
+  s.avatar = url; renderSceneList(); renderBottomNav();
+}, 'av-prev', { maxW: 400, maxH: 300, q: 0.82 });
+
+// Main panorama — PNG 转 JPEG、超宽图缩到 4096px，保留高质量
+bindUpload('main-uz', 'main-fi', url => {
+  const s = curScene(); if (!s) return;
+  s.pending.main = url;
+  if (!s.pending.top && !s.pending.bot) {
+    s.equirect = url;
+    if (!s.avatar) { s.avatar = url; renderSceneList(); renderBottomNav(); }
+    loadTex(url);
+  }
+}, 'main-prev', { maxW: 4096, maxH: 2048, q: 0.88 });
+
+// Top supplemental — 上限 2048px
+bindUpload('top-uz', 'top-fi', url => {
+  const s = curScene(); if (s) s.pending.top = url;
+}, 'top-prev', { maxW: 2048, maxH: 2048, q: 0.85 });
+
+// Bottom supplemental — 上限 2048px
+bindUpload('bot-uz', 'bot-fi', url => {
+  const s = curScene(); if (s) s.pending.bot = url;
+}, 'bot-prev', { maxW: 2048, maxH: 2048, q: 0.85 });
+
+// 热点图片上传（压缩到屏幕友好尺寸，弹窗展示用）
+bindUpload('hs-img-uz', 'hs-img-fi', url => {
+  _hsImgData = url;
+}, 'hs-img-prev', { maxW: 1920, maxH: 1280, q: 0.88 });
+
+// ════════════════════════════════════════════════════════
+// EXPORT VIEWER HTML
+// ════════════════════════════════════════════════════════
+
+// 质量配置：{ maxW, maxH, q }
+const EQ = {
+  hd:   { maxW: 4096, maxH: 2048, q: 0.88 },
+  std:  { maxW: 2048, maxH: 1024, q: 0.82 },
+  lite: { maxW: 1024, maxH:  512, q: 0.75 }
+};
+let _eqKey = 'std'; // 当前选择的质量
+
+// 质量卡片交互
+document.getElementById('eq-cards').addEventListener('click', e => {
+  const card = e.target.closest('.eq-card'); if (!card) return;
+  _eqKey = card.dataset.q;
+  document.querySelectorAll('.eq-card').forEach(c => c.classList.toggle('on', c.dataset.q === _eqKey));
+});
+
+// 确认导出
+document.getElementById('eq-confirm').addEventListener('click', () => {
+  closeModal('m-export');
+  doExportViewer(_eqKey);
+});
+
+// 实际导出（含按质量重新压缩）
+async function doExportViewer(qKey) {
+  const btn = document.getElementById('btn-export-viewer');
+  btn.disabled = true; btn.textContent = '⏳ 压缩中…';
+  // 让 UI 先渲染，再开始 CPU 密集操作
+  await new Promise(r => setTimeout(r, 80));
+  try {
+    const opts = EQ[qKey] || EQ.std;
+    // 并行压缩所有场景的图片
+    const sceneData = await Promise.all(scenes.map(async s => ({
+      id: s.id, name: s.name,
+      // 头像压缩到小尺寸（导出后只作底部导航缩略图）
+      avatar:   s.avatar   ? await compressImg(s.avatar,   320, 240,  0.80) : null,
+      // 全景图按所选质量重新压缩
+      equirect: s.equirect ? await compressImg(s.equirect, opts.maxW, opts.maxH, opts.q) : null,
+      hotspots:  s.hotspots,
+      textBoxes: s.textBoxes,
+      hidden:   s.hidden,
+      defLon:   s.defLon || 0,
+      defLat:   s.defLat || 0
+    })));
+
+    btn.textContent = '⏳ 生成中…';
+    await new Promise(r => setTimeout(r, 40));
+
+    const initId = curId || (scenes[0] && scenes[0].id) || '';
+    const title  = (scenes.find(s => s.id === initId) || scenes[0] || {}).name || 'VR 全景';
+    const html   = generateViewerHTML(sceneData, initId, title);
+    const blob   = new Blob([html], { type: 'text/html;charset=utf-8' });
+    const a      = document.createElement('a');
+    a.href       = URL.createObjectURL(blob);
+    a.download   = title.replace(/[\\/:*?"<>|]/g, '_') + '.html';
+    a.click();
+    URL.revokeObjectURL(a.href);
+
+    // 估算导出大小（给用户反馈）
+    const kb = Math.round(blob.size / 1024);
+    const sizeStr = kb > 1024 ? (kb / 1024).toFixed(1) + ' MB' : kb + ' KB';
+    btn.textContent = `✓ 导出成功 (${sizeStr})`;
+  } catch(err) {
+    console.error(err);
+    alert('导出失败：' + err.message);
+    btn.textContent = '📦 导出交付版 HTML';
+  }
+  setTimeout(() => { btn.disabled = false; btn.textContent = '📦 导出交付版 HTML'; }, 4000);
+}
+
+function generateViewerHTML(sceneData, initId, pageTitle) {
+  const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  const d   = JSON.stringify({ scenes: sceneData, initId: initId });
+
+  // ── VIEWER CSS (static, no inner template expressions needed) ─────────
+  const css = `
+:root{--pri:#00d4ff;--bg:#0c0c0f;--surf2:#272736;--bdr:#2e2e40;--txt:#e0e0f0;--r:8px}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--txt);
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:14px}
+button{cursor:pointer;font-family:inherit}
+#vw{position:fixed;inset:0;background:#000}
+#cc{width:100%;height:100%}
+#cc canvas{display:block;width:100%!important;height:100%!important}
+#tr-ov{position:absolute;inset:0;background:#000;opacity:0;
+  transition:opacity .35s ease;pointer-events:none;z-index:200}
+#tr-ov.on{opacity:1}
+#ov{position:absolute;inset:0;pointer-events:none;z-index:100}
+.hs-mk{position:absolute;transform:translate(-50%,-50%);pointer-events:auto;cursor:pointer}
+.hs-ring{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;
+  justify-content:center;font-size:19px;position:relative;
+  transition:transform .2s ease;box-shadow:0 3px 14px rgba(0,0,0,.45)}
+.hs-ring.tp-sc{background:rgba(0,212,255,.85);border:2px solid rgba(255,255,255,.45);color:#00d4ff}
+.hs-ring.tp-inf{background:rgba(251,191,36,.85);border:2px solid rgba(255,255,255,.45);color:#fbbf24}
+.hs-ring.tp-img{background:rgba(139,195,74,.85);border:2px solid rgba(255,255,255,.45);color:#7cb342}
+.hs-ring::before{content:'';position:absolute;inset:-7px;border-radius:50%;
+  border:2px solid currentColor;opacity:.4;animation:hspulse 2.2s infinite}
+@keyframes hspulse{0%{transform:scale(.75);opacity:.7}70%{transform:scale(1.6);opacity:0}100%{transform:scale(.75);opacity:0}}
+.hs-mk:hover .hs-ring{transform:scale(1.15)}
+.hs-lbl{position:absolute;top:calc(100% + 6px);left:50%;transform:translateX(-50%);
+  white-space:nowrap;background:rgba(0,0,0,.8);color:#fff;padding:3px 8px;
+  border-radius:4px;font-size:11px;font-weight:500;pointer-events:none;backdrop-filter:blur(4px)}
+#ip-img-wrap{margin-bottom:12px;border-radius:8px;overflow:hidden;background:#000;line-height:0}
+#ip-img{width:100%;max-height:58vh;object-fit:contain;display:block;margin:0 auto}
+.tb-ov{position:absolute;transform:translate(-50%,-50%);pointer-events:none;z-index:99}
+.tb-panel{background:rgba(5,5,15,.75);backdrop-filter:blur(12px);
+  border:1px solid rgba(255,255,255,.12);border-radius:10px;
+  padding:11px 15px;max-width:270px;min-width:130px;color:#fff;
+  box-shadow:0 8px 32px rgba(0,0,0,.45)}
+.tb-title{font-size:13px;font-weight:600;margin-bottom:5px;
+  border-bottom:1px solid rgba(255,255,255,.12);padding-bottom:5px}
+.tb-cont{font-size:12px;line-height:1.65;color:rgba(255,255,255,.82);white-space:pre-wrap}
+#topbar{position:absolute;top:0;left:0;right:0;display:flex;align-items:center;gap:10px;
+  padding:10px 16px;background:linear-gradient(to bottom,rgba(0,0,0,.68),transparent);
+  z-index:150;pointer-events:none}
+#topbar>*{pointer-events:auto}
+.vr-title{flex:1;font-size:15px;font-weight:600;color:#fff;text-shadow:0 1px 5px rgba(0,0,0,.9)}
+.vr-btn{background:rgba(0,0,0,.52);backdrop-filter:blur(8px);
+  border:1px solid rgba(255,255,255,.14);color:#fff;padding:6px 12px;
+  border-radius:18px;font-size:12px;cursor:pointer;transition:.2s ease;display:flex;align-items:center;gap:5px}
+.vr-btn:hover{background:rgba(255,255,255,.14)}
+#ip-bg{position:absolute;inset:0;background:rgba(0,0,0,.52);
+  backdrop-filter:blur(3px);z-index:490;display:none}
+#ip-bg.on{display:block}
+#ip{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) scale(.92);
+  background:rgba(12,12,20,.96);backdrop-filter:blur(18px);
+  border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:20px 22px;
+  width:min(460px,calc(100vw - 40px));max-height:72vh;overflow-y:auto;color:#fff;
+  z-index:500;display:none;box-shadow:0 20px 60px rgba(0,0,0,.7);
+  transition:transform .25s ease,opacity .25s ease;opacity:0}
+#ip.on{display:block;transform:translate(-50%,-50%) scale(1);opacity:1}
+.ip-head{display:flex;align-items:center;gap:9px;margin-bottom:12px;
+  padding-bottom:11px;border-bottom:1px solid rgba(255,255,255,.1)}
+.ip-ic{font-size:22px}.ip-ttl{flex:1;font-size:16px;font-weight:600}
+.ip-x{background:rgba(255,255,255,.1);border:none;color:#fff;width:26px;height:26px;
+  border-radius:50%;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center}
+.ip-x:hover{background:rgba(255,255,255,.2)}
+.ip-body{font-size:13px;line-height:1.75;color:rgba(255,255,255,.84);white-space:pre-wrap}
+#bnav{position:absolute;bottom:0;left:0;right:0;
+  background:linear-gradient(to top,rgba(0,0,0,.82),transparent);
+  padding:18px 14px 14px;z-index:150}
+#bnav-in{display:flex;align-items:flex-end;gap:9px;overflow-x:auto;padding-bottom:3px;
+  scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.18) transparent}
+#bnav-in::-webkit-scrollbar{height:3px}
+#bnav-in::-webkit-scrollbar-thumb{background:rgba(255,255,255,.18);border-radius:2px}
+.nc{flex-shrink:0;display:flex;flex-direction:column;align-items:center;
+  cursor:pointer;transition:transform .25s ease;gap:5px}
+.nc:hover{transform:translateY(-4px)}
+.nc.cur .nc-th{border-color:var(--pri);box-shadow:0 0 0 2px var(--pri),0 4px 18px rgba(0,212,255,.3)}
+.nc-th{width:68px;height:48px;border-radius:7px;overflow:hidden;
+  border:2px solid rgba(255,255,255,.18);transition:border-color .25s,box-shadow .25s;
+  background:var(--surf2);display:flex;align-items:center;justify-content:center;font-size:20px}
+.nc-th img{width:100%;height:100%;object-fit:cover}
+.nc-nm{font-size:10px;color:rgba(255,255,255,.7);max-width:68px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center}
+.nc.cur .nc-nm{color:var(--pri);font-weight:600}
+#bnav{display:flex;flex-direction:column;gap:5px}
+#bnav-cats{display:none;flex-wrap:nowrap;overflow-x:auto;gap:6px;padding:0 2px;scrollbar-width:none}
+#bnav-cats::-webkit-scrollbar{display:none}
+.nc-cat{flex-shrink:0;padding:4px 13px;border-radius:12px;font-size:11px;font-weight:500;cursor:pointer;background:rgba(255,255,255,.1);color:rgba(255,255,255,.7);border:1px solid rgba(255,255,255,.14);transition:.2s}
+.nc-cat:hover{background:rgba(255,255,255,.18)}
+.nc-cat.on{background:var(--pri);color:#000;border-color:var(--pri)}
+#bnav-in.centered{justify-content:center}
+.vr-btn.active{background:rgba(0,212,255,.2);border-color:rgba(0,212,255,.5)}`;
+
+  // ── VIEWER JS (no template literals — uses only var/function/concat) ──
+  const js = `
+var _D    = VR_DATA;
+var scenes = _D.scenes;
+var curId  = _D.initId;
+var threeScene, cam, renderer, sphere;
+var lon = 0, lat = 0;
+var pDown = false, pMoved = false;
+var pX0 = 0, pY0 = 0, lon0 = 0, lat0 = 0;
+var _pv = null, _cd = null, _ccEl = null;
+var _oLon = null, _oLat = null, _oFov = null;
+
+function curScene() {
+  for (var i = 0; i < scenes.length; i++) { if (scenes[i].id === curId) return scenes[i]; }
+  return null;
+}
+
+function initThree() {
+  var cc = document.getElementById('cc');
+  _ccEl = cc;
+  threeScene = new THREE.Scene();
+  cam = new THREE.PerspectiveCamera(75, cc.clientWidth / cc.clientHeight, 0.1, 1000);
+  cam.position.set(0, 0, 0.01);
+  renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setSize(cc.clientWidth, cc.clientHeight);
+  cc.appendChild(renderer.domElement);
+  var geo = new THREE.SphereGeometry(500, 72, 48);
+  geo.scale(-1, 1, 1);
+  sphere = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: 0x111116, side: THREE.DoubleSide }));
+  threeScene.add(sphere);
+  _pv = new THREE.Vector3();
+  _cd = new THREE.Vector3();
+  renderer.domElement.addEventListener('pointerdown', onPD);
+  renderer.domElement.addEventListener('pointermove', onPM);
+  renderer.domElement.addEventListener('pointerup',   onPU);
+  renderer.domElement.addEventListener('wheel', onWH, { passive: false });
+  window.addEventListener('resize', onResize);
+  loop();
+}
+
+function loop() {
+  requestAnimationFrame(loop);
+  lat = Math.max(-85, Math.min(85, lat));
+  var phi   = THREE.MathUtils.degToRad(90 - lat);
+  var theta = THREE.MathUtils.degToRad(lon);
+  cam.lookAt(
+    500 * Math.sin(phi) * Math.cos(theta),
+    500 * Math.cos(phi),
+    500 * Math.sin(phi) * Math.sin(theta)
+  );
+  renderer.render(threeScene, cam);
+  if (lon !== _oLon || lat !== _oLat || cam.fov !== _oFov) {
+    updateOverlays();
+    _oLon = lon; _oLat = lat; _oFov = cam.fov;
+  }
+}
+
+function onPD(e) {
+  pDown = true; pMoved = false;
+  pX0 = e.clientX; pY0 = e.clientY; lon0 = lon; lat0 = lat;
+  renderer.domElement.setPointerCapture(e.pointerId);
+}
+function onPM(e) {
+  if (!pDown) return;
+  var dx = e.clientX - pX0, dy = e.clientY - pY0;
+  if (Math.abs(dx) > 8 || Math.abs(dy) > 8) pMoved = true;
+  lon = lon0 - dx * 0.13; lat = lat0 + dy * 0.13;
+}
+function onPU() { pDown = false; }
+function onWH(e) {
+  e.preventDefault();
+  cam.fov = THREE.MathUtils.clamp(cam.fov + e.deltaY * 0.04, 18, 100);
+  cam.updateProjectionMatrix();
+}
+function onResize() {
+  _ccEl = document.getElementById('cc');
+  cam.aspect = _ccEl.clientWidth / _ccEl.clientHeight;
+  cam.updateProjectionMatrix();
+  renderer.setSize(_ccEl.clientWidth, _ccEl.clientHeight);
+  _oLon = null;
+}
+function resetView() {
+  var s = curScene();
+  lon = s ? (s.defLon || 0) : 0;
+  lat = s ? (s.defLat || 0) : 0;
+  cam.fov = 75; cam.updateProjectionMatrix();
+}
+function loadTex(url) {
+  new THREE.TextureLoader().load(url, function(tex) {
+    if (sphere.material.map) sphere.material.map.dispose();
+    sphere.material.map = tex;
+    sphere.material.color.set(0xffffff);
+    sphere.material.needsUpdate = true;
+  });
+}
+
+function llToScreen(lon2, lat2) {
+  var phi   = THREE.MathUtils.degToRad(90 - lat2);
+  var theta = THREE.MathUtils.degToRad(lon2);
+  _pv.set(
+    500 * Math.sin(phi) * Math.cos(theta),
+    500 * Math.cos(phi),
+    500 * Math.sin(phi) * Math.sin(theta)
+  );
+  cam.getWorldDirection(_cd);
+  var dot = _cd.dot(_pv) / 500;
+  _pv.project(cam);
+  return { x: (_pv.x + 1) / 2 * _ccEl.clientWidth, y: (-_pv.y + 1) / 2 * _ccEl.clientHeight, vis: dot > 0.12 };
+}
+
+function delay(ms) { return new Promise(function(r) { setTimeout(r, ms); }); }
+
+async function switchScene(id, anim) {
+  if (anim === undefined) anim = true;
+  if (id === curId) return;
+  var ov = document.getElementById('tr-ov');
+  if (anim) { ov.classList.add('on'); await delay(350); }
+  curId = id;
+  var s = curScene();
+  if (s) {
+    if (s.equirect) loadTex(s.equirect);
+    else {
+      if (sphere.material.map) sphere.material.map.dispose();
+      sphere.material.map = null; sphere.material.color.set(0x111116);
+      sphere.material.needsUpdate = true;
+    }
+    lon = s.defLon || 0; lat = s.defLat || 0;
+    cam.fov = 75; cam.updateProjectionMatrix();
+    document.getElementById('sc-ttl').textContent = s.name;
+  }
+  renderOverlay();
+  renderBottomNav();
+  if (anim) ov.classList.remove('on');
+}
+
+function renderOverlay() {
+  var ov = document.getElementById('ov');
+  ov.innerHTML = '';
+  _oLon = null; // 强制下帧刷新位置
+  var s = curScene(); if (!s) return;
+  s.hotspots.forEach(function(hs) {
+    var el  = document.createElement('div');
+    el.className = 'hs-mk';
+    el.id = 'hs_' + hs.id;
+    var icon = hs.icon || (hs.type === 'img' ? '🖼️' : hs.type === 'scene' ? '🔀' : 'ℹ️');
+    el.innerHTML = '<div class="hs-ring tp-' + hs.type + '">' + icon + '</div>' +
+                   '<div class="hs-lbl">' + hs.label + '</div>';
+    (function(h) {
+      el.addEventListener('click', function(ev) { ev.stopPropagation(); handleHsClick(h); });
+    })(hs);
+    ov.appendChild(el);
+  });
+  s.textBoxes.forEach(function(tb) {
+    var el = document.createElement('div');
+    el.className = 'tb-ov';
+    el.id = 'tb_' + tb.id;
+    var inner = '<div class="tb-panel">';
+    if (tb.title) inner += '<div class="tb-title">' + tb.title + '</div>';
+    inner += '<div class="tb-cont">' + (tb.content || '') + '</div></div>';
+    el.innerHTML = inner;
+    ov.appendChild(el);
+  });
+}
+
+function updateOverlays() {
+  var s = curScene(); if (!s) return;
+  s.hotspots.forEach(function(hs) {
+    var el = document.getElementById('hs_' + hs.id); if (!el) return;
+    var p = llToScreen(hs.lon, hs.lat);
+    el.style.left = p.x + 'px'; el.style.top = p.y + 'px';
+    el.style.display = p.vis ? '' : 'none';
+  });
+  s.textBoxes.forEach(function(tb) {
+    var el = document.getElementById('tb_' + tb.id); if (!el) return;
+    var p = llToScreen(tb.lon, tb.lat);
+    el.style.left = p.x + 'px'; el.style.top = p.y + 'px';
+    el.style.display = p.vis ? '' : 'none';
+  });
+}
+
+function renderBottomNav() {
+  var catsEl = document.getElementById('bnav-cats');
+  var cont   = document.getElementById('bnav-in');
+  cont.innerHTML = '';
+  catsEl.innerHTML = '';
+  var vis = scenes.filter(function(s) { return !s.hidden; });
+  if (vis.length <= 1) { document.getElementById('bnav').style.display = 'none'; return; }
+  document.getElementById('bnav').style.display = '';
+
+  // 提取分类
+  var cats = [];
+  vis.forEach(function(s) {
+    var c = (s.category || '').trim();
+    if (c && cats.indexOf(c) === -1) cats.push(c);
+  });
+
+  function makeCard(s) {
+    var d = document.createElement('div');
+    d.className = 'nc' + (s.id === curId ? ' cur' : '');
+    var th = '<div class="nc-th">' + (s.avatar ? '<img src="' + s.avatar + '" loading="lazy">' : '🌐') + '</div>';
+    var nm = '<div class="nc-nm">' + s.name + '</div>';
+    d.innerHTML = th + nm;
+    (function(sid) { d.addEventListener('click', function() { switchScene(sid); }); })(s.id);
+    return d;
+  }
+
+  if (cats.length > 0) {
+    catsEl.style.display = 'flex';
+    cont.style.justifyContent = '';
+    var makeTab = function(label, active) {
+      var t = document.createElement('div');
+      t.className = 'nc-cat' + (active ? ' on' : '');
+      t.textContent = label;
+      return t;
+    };
+    var allTab = makeTab('全部', _navCat === null);
+    allTab.onclick = function() { _navCat = null; renderBottomNav(); };
+    catsEl.appendChild(allTab);
+    cats.forEach(function(cat) {
+      var tab = makeTab(cat, _navCat === cat);
+      (function(c) { tab.onclick = function() { _navCat = c; renderBottomNav(); }; })(cat);
+      catsEl.appendChild(tab);
+    });
+    var filtered = _navCat === null ? vis : vis.filter(function(s) { return (s.category || '').trim() === _navCat; });
+    filtered.forEach(function(s) { cont.appendChild(makeCard(s)); });
+  } else {
+    catsEl.style.display = 'none';
+    cont.style.justifyContent = 'center';
+    vis.forEach(function(s) { cont.appendChild(makeCard(s)); });
+  }
+}
+var _navCat = null;
+
+function handleHsClick(hs) {
+  if (hs.type === 'scene') {
+    if (hs.targetScene) switchScene(hs.targetScene);
+  } else if (hs.type === 'img') {
+    showInfoPopup(hs.icon || '🖼️', hs.label, hs.infoCont || '', hs.imgData || null);
+  } else {
+    showInfoPopup(hs.icon || 'ℹ️', hs.infoTitle || hs.label, hs.infoCont, null);
+  }
+}
+function showInfoPopup(icon, title, body, imgData) {
+  document.getElementById('ip-ic').textContent = icon;
+  document.getElementById('ip-ttl').textContent = title;
+  var bodyEl = document.getElementById('ip-body');
+  bodyEl.textContent = body || '';
+  bodyEl.style.display = body ? '' : 'none';
+  var wrap = document.getElementById('ip-img-wrap');
+  var img  = document.getElementById('ip-img');
+  if (imgData) { img.src = imgData; wrap.style.display = ''; }
+  else { wrap.style.display = 'none'; img.src = ''; }
+  document.getElementById('ip-bg').classList.add('on');
+  document.getElementById('ip').classList.add('on');
+}
+function hideInfoPopup() {
+  document.getElementById('ip-bg').classList.remove('on');
+  document.getElementById('ip').classList.remove('on');
+  document.getElementById('ip-img').src = '';
+  document.getElementById('ip-body').style.display = '';
+}
+
+// ── Wire events ──────────────────────────────────────────
+document.getElementById('ip-x').addEventListener('click', hideInfoPopup);
+document.getElementById('ip-bg').addEventListener('click', hideInfoPopup);
+document.getElementById('btn-rv').addEventListener('click', resetView);
+document.getElementById('btn-fs').addEventListener('click', function() {
+  if (!document.fullscreenElement) document.getElementById('vw').requestFullscreen();
+  else document.exitFullscreen();
+});
+// 场景导航显示/隐藏 toggle
+var _navVisible = true;
+document.getElementById('btn-nav').addEventListener('click', function() {
+  _navVisible = !_navVisible;
+  document.getElementById('bnav').style.display = _navVisible ? '' : 'none';
+  this.classList.toggle('active', !_navVisible);
+  this.textContent = _navVisible ? '\u22b1 \u573a\u666f' : '\u229e \u573a\u666f';
+});
+// 全屏时更新按钮文字
+document.addEventListener('fullscreenchange', function() {
+  var btn = document.getElementById('btn-fs');
+  btn.textContent = document.fullscreenElement ? '\u25a1 \u9000\u51fa\u5168\u5c4f' : '\u26f6 \u5168\u5c4f';
+});
+
+// ── Boot ─────────────────────────────────────────────────
+initThree();
+var s0 = (function() {
+  for (var i = 0; i < scenes.length; i++) { if (scenes[i].id === curId) return scenes[i]; }
+  return scenes[0];
+})();
+if (s0) {
+  curId = s0.id;
+  if (s0.equirect) loadTex(s0.equirect);
+  lon = s0.defLon || 0; lat = s0.defLat || 0;
+  document.getElementById('sc-ttl').textContent = s0.name;
+  renderOverlay();
+  renderBottomNav();
+}`;
+
+  return '<!DOCTYPE html>\n' +
+  '<html lang="zh-CN">\n' +
+  '<head>\n' +
+  '<meta charset="UTF-8">\n' +
+  '<meta name="viewport" content="width=device-width,initial-scale=1.0">\n' +
+  '<title>' + esc(pageTitle) + '</title>\n' +
+  '<style>' + css + '</style>\n' +
+  '</head>\n' +
+  '<body>\n' +
+  '<div id="vw">\n' +
+  '  <div id="cc"></div>\n' +
+  '  <div id="ov"></div>\n' +
+  '  <div id="tr-ov"></div>\n' +
+  '  <div id="ip-bg"></div>\n' +
+  '  <div id="ip">\n' +
+  '    <div class="ip-head">\n' +
+  '      <div class="ip-ic" id="ip-ic">\u2139\ufe0f</div>\n' +
+  '      <div class="ip-ttl" id="ip-ttl">\u4fe1\u606f</div>\n' +
+  '      <button class="ip-x" id="ip-x">\u2715</button>\n' +
+  '    </div>\n' +
+  '    <div id="ip-img-wrap" style="display:none"><img id="ip-img" src="" style="width:100%;max-height:58vh;object-fit:contain;display:block;border-radius:6px;background:#000"></div>\n' +
+  '    <div class="ip-body" id="ip-body"></div>\n' +
+  '  </div>\n' +
+  '  <div id="topbar">\n' +
+  '    <div class="vr-title" id="sc-ttl">\u2014</div>\n' +
+  '    <button class="vr-btn" id="btn-rv">\u21ba \u91cd\u7f6e</button>\n' +
+  '    <button class="vr-btn" id="btn-nav">\u22b1 \u573a\u666f</button>\n' +
+  '    <button class="vr-btn" id="btn-fs">\u26f6 \u5168\u5c4f</button>\n' +
+  '  </div>\n' +
+  '  <div id="bnav"><div id="bnav-cats"></div><div id="bnav-in"></div></div>\n' +
+  '</div>\n' +
+  '<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"><\/script>\n' +
+  '<script>\n' +
+  'var VR_DATA = ' + d + ';\n' +
+  js + '\n' +
+  '<\/script>\n' +
+  '</body>\n' +
+  '</html>';
+}
+
+// ════════════════════════════════════════════════════════
+// BOOT
+// ════════════════════════════════════════════════════════
+initThree();
+const firstScene = mkScene('场景一');
+scenes.push(firstScene);
+switchScene(firstScene.id, false);
+renderSceneList();
+renderBottomNav();
+renderHsList();
+renderTbList();
+</script>
+</body>
+</html>
