@@ -52,6 +52,9 @@
         .poster { width: 750px; box-shadow: 0 10px 40px rgba(0,0,0,0.4); background-color: var(--bg-color, #a61b1b); position: relative; }
         .poster-bg-layer { position: absolute; top: 0; left: 0; right: 0; height: 280px; z-index: 0; background-size: cover; background-position: center; background-repeat: no-repeat; }
         .poster-bg-fade { position: absolute; top: 150px; left: 0; right: 0; height: 130px; background: linear-gradient(to bottom, rgba(255,255,255,0) 0%, var(--bg-color, #a61b1b) 100%); z-index: 1; pointer-events: none; }
+        /* 背景模式：full 时背景图覆盖整个海报，淡出层隐藏 */
+        .poster.bg-mode-full .poster-bg-layer { height: 100%; bottom: 0; }
+        .poster.bg-mode-full .poster-bg-fade { display: none; }
         .poster-top-tag-wrapper { margin: 0 20px; padding-top: 20px; position: relative; z-index: 1; display: none; }
         .poster-top-tag-wrapper.has-content { display: block; }
         .poster-top-tag { background: #e52424; color: #fff; padding: 4px 16px; border-radius: 4px; font-size:18px; font-weight: 600; display: inline-block; margin-bottom: 1px; }
@@ -63,7 +66,7 @@
         .poster-body { background: #ffffff !important; margin: 0 20px 20px; min-height: 400px; padding: 25px; position: relative; z-index: 10; border-radius: 8px; }
         .editor-content { outline: none; line-height: 1.8; color: #333; min-height: 350px; padding: 0 20px; }
         
-        .editor-content h1 { font-size: 35px; font-weight: 700; margin: 4px 0 10px; color: var(--theme-color, #a61b1b); display: inline-block;border-bottom: 3px solid #a61b1b;     padding-bottom: 0px;}
+        .editor-content h1 { font-size: 35px; font-weight: 700; margin: 4px 0 10px; color: var(--theme-color, #a61b1b); display: inline-block;border-bottom: 3px solid currentColor;     padding-bottom: 0px;}
         .editor-content h2 { font-size: 28px; font-weight: 600; margin: 2px 0 2px; color: var(--theme-color, #a61b1b); }
         .editor-content h3 { font-size: 20px; font-weight: 600; margin: 18px 0 2px; color: #fff; background: var(--theme-color, #a61b1b); display: inline-block; padding: 1px 10px; border-radius: 2px; line-height: 1.4; }
         .editor-content p { margin: 0 0 8px 0; font-size: 18px; text-align: justify; }
@@ -130,7 +133,7 @@
         .text-box p { margin: 0; font-size: 18px; line-height: 1.6; color: #333; }
         
         /* 分隔线 */
-        .divider-line, .divider-dashed, .divider-dotted { border: none; height: 2px; margin: 20px 0; }
+        .divider-line, .divider-dashed, .divider-dotted { border: none; height: 2px; margin: 35px 0; }
         .divider-line { background: #ddd; }
         .divider-dashed { background: repeating-linear-gradient(90deg, #ddd, #ddd 10px, transparent 10px, transparent 20px); }
         .divider-dotted { background: repeating-linear-gradient(90deg, #ddd, #ddd 4px, transparent 4px, transparent 8px); }
@@ -143,6 +146,9 @@
         
         .modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); z-index: 2000; align-items: center; justify-content: center; }
         .modal.show { display: flex; }
+        /* 取色器/吸管激活时：临时移除蒙版和弹窗内容，方便从画布吸取真实颜色 */
+        .modal.picker-open { background: transparent !important; pointer-events: none !important; }
+        .modal.picker-open .modal-content { visibility: hidden !important; }
         .modal-content { background: white; border-radius: 8px; padding: 20px; width: 380px; max-height: 80vh; overflow-y: auto; }
         .crop-modal-content { width: 600px; max-width: 90vw; }
         .crop-container { position: relative; display: inline-block; max-width: 100%; background: #f0f0f0; }
@@ -550,14 +556,50 @@
             <div class="panel-section open">
                 <div class="panel-header" onclick="togglePanel(this)"><span>📋 标题设置</span><i class="fas fa-chevron-down arrow"></i></div>
                 <div class="panel-body">
-                    <div class="field"><label>顶部小标签</label><input type="text" id="topTag" value="" placeholder="输入标签内容，为空则不显示" oninput="updateTitle()"></div>
-                    <div class="field"><label>主标题</label><input type="text" id="mainTitle" value="标题标题标题标题" oninput="updateTitle()"></div>
-                    <div class="field"><label>副标题</label><input type="text" id="subTitle" value="biaotibiaotibiaoti" oninput="updateTitle()"></div>
+                    <div class="field">
+                        <label>顶部小标签</label>
+                        <input type="text" id="topTag" value="" placeholder="输入标签内容，为空则不显示" oninput="updateTitle()">
+                        <div style="display:flex;gap:6px;align-items:center;margin-top:6px;">
+                            <span style="font-size:11px;color:#666;white-space:nowrap;">字号</span>
+                            <input type="number" id="topTagFontSize" value="18" min="10" max="48" style="width:50px;padding:4px;border:1px solid #ddd;border-radius:3px;font-size:11px;" oninput="updateTitle()">
+                            <span style="font-size:11px;color:#666;white-space:nowrap;">文字</span>
+                            <input type="color" id="topTagColor" value="#ffffff" style="width:28px;height:24px;padding:0;border:none;cursor:pointer;" oninput="updateTitle()">
+                            <span style="font-size:11px;color:#666;white-space:nowrap;">底色</span>
+                            <input type="color" id="topTagBgColor" value="#e52424" style="width:28px;height:24px;padding:0;border:none;cursor:pointer;" oninput="updateTitle()">
+                        </div>
+                    </div>
+                    <div class="field">
+                        <label>主标题</label>
+                        <input type="text" id="mainTitle" value="标题标题标题标题" oninput="updateTitle()">
+                        <div style="display:flex;gap:6px;align-items:center;margin-top:6px;">
+                            <span style="font-size:11px;color:#666;white-space:nowrap;">字号</span>
+                            <input type="number" id="mainTitleFontSize" value="45" min="14" max="120" style="width:55px;padding:4px;border:1px solid #ddd;border-radius:3px;font-size:11px;" oninput="updateTitle()">
+                            <span style="font-size:11px;color:#666;white-space:nowrap;">颜色</span>
+                            <input type="color" id="mainTitleColor" value="#ffffff" style="width:28px;height:24px;padding:0;border:none;cursor:pointer;" oninput="updateTitle()">
+                        </div>
+                    </div>
+                    <div class="field">
+                        <label>副标题</label>
+                        <input type="text" id="subTitle" value="biaotibiaotibiaoti" oninput="updateTitle()">
+                        <div style="display:flex;gap:6px;align-items:center;margin-top:6px;">
+                            <span style="font-size:11px;color:#666;white-space:nowrap;">字号</span>
+                            <input type="number" id="subTitleFontSize" value="25" min="10" max="80" style="width:55px;padding:4px;border:1px solid #ddd;border-radius:3px;font-size:11px;" oninput="updateTitle()">
+                            <span style="font-size:11px;color:#666;white-space:nowrap;">颜色</span>
+                            <input type="color" id="subTitleColor" value="#ffffff" style="width:28px;height:24px;padding:0;border:none;cursor:pointer;" oninput="updateTitle()">
+                        </div>
+                    </div>
                 </div>
             </div>
             <div class="panel-section open">
                 <div class="panel-header" onclick="togglePanel(this)"><span>🎨 背景设置</span><i class="fas fa-chevron-down arrow"></i></div>
                 <div class="panel-body">
+                    <div class="field">
+                        <label>背景模式</label>
+                        <div class="btn-row">
+                            <button class="btn-small" id="bgModeTopBtn" onclick="setBgMode('top')" style="background:#e8f4fd;border-color:#3498db;color:#3498db;">仅顶部</button>
+                            <button class="btn-small" id="bgModeFullBtn" onclick="setBgMode('full')">全背景</button>
+                        </div>
+                    </div>
                     <div class="field"><label>背景颜色</label><div style="display:flex;gap:8px;"><input type="color" id="bgColorPicker" value="#a61b1b" style="width:50px;height:40px;padding:0;border:none;"><input type="text" id="bgColorInput" value="#a61b1b" style="flex:1;" onchange="setBgColor(this.value)"></div></div>
                     <div class="field"><label>背景图</label><input type="file" id="bgImgInput" accept="image/*" onchange="uploadBgImg(this)"></div>
                     <div class="img-preview" id="bgPreview"><span>默认背景</span></div>
@@ -1711,6 +1753,34 @@ function showColor() {
     }
     document.getElementById('colorModal').classList.add('show');
     _renderRecentColors();
+    _bindCustomColorPickerHideMask();
+}
+
+// 取色器打开/关闭时移除/恢复 colorModal 的灰色蒙版，方便吸管真实采样
+var _customColorPickerBound = false;
+function _bindCustomColorPickerHideMask() {
+    if (_customColorPickerBound) return;
+    var picker = document.getElementById('customColorPicker');
+    if (!picker) return;
+    _customColorPickerBound = true;
+    var modal = document.getElementById('colorModal');
+    var hide = function() { if (modal) modal.classList.add('picker-open'); };
+    var show = function() {
+        if (!modal) return;
+        // 延迟一点恢复，避免点击穿透到底层导致弹窗立刻关闭
+        setTimeout(function(){ modal.classList.remove('picker-open'); }, 80);
+    };
+    // 点击原生取色器 → 进入吸管/调色板状态：移除蒙版
+    picker.addEventListener('mousedown', hide);
+    picker.addEventListener('focus', hide);
+    // 选定颜色或关闭后恢复蒙版
+    picker.addEventListener('change', function(e) { syncCustomColorHex(e.target.value); show(); });
+    picker.addEventListener('blur', show);
+    // input 持续触发时也保持隐藏（拖动滑块/吸管移动）
+    picker.addEventListener('input', function(e) {
+        syncCustomColorHex(e.target.value);
+        hide();
+    });
 }
 
 function applyColor(color) {
@@ -1725,6 +1795,35 @@ function applyColor(color) {
     
     if (sel.rangeCount > 0 && !sel.isCollapsed) {
         if (currentColorMode === 'foreColor') {
+            // 检查选区是否完整覆盖某个 H1（让下划线随之同步）
+            var range = sel.getRangeAt(0);
+            var sNode = range.startContainer;
+            var eNode = range.endContainer;
+            if (sNode.nodeType === 3) sNode = sNode.parentNode;
+            if (eNode.nodeType === 3) eNode = eNode.parentNode;
+            var startH1 = sNode.closest && sNode.closest('h1');
+            var endH1   = eNode.closest && eNode.closest('h1');
+            if (startH1 && startH1 === endH1) {
+                var selTxt = range.toString().replace(/\s+/g, '');
+                var h1Txt  = startH1.textContent.replace(/\s+/g, '');
+                if (selTxt && selTxt === h1Txt) {
+                    // 选中了整个 H1 文本 —— 直接设置 H1 的 color，下划线 currentColor 会自动跟随
+                    startH1.style.color = color;
+                    // 清掉内部的 inline color，避免被覆盖
+                    startH1.querySelectorAll('font[color], [style*="color"]').forEach(function(s) {
+                        if (s.tagName === 'FONT') s.removeAttribute('color');
+                        if (s.style && s.style.color) {
+                            s.style.color = '';
+                            if (!s.getAttribute('style')) s.removeAttribute('style');
+                        }
+                    });
+                    _pushRecentColor(color);
+                    hideModal('colorModal');
+                    showToast('颜色已应用（H1 下划线同步）');
+                    savedRange = null;
+                    return;
+                }
+            }
             document.execCommand('foreColor', false, color);
         } else {
             document.execCommand('hiliteColor', false, color);
@@ -1826,6 +1925,31 @@ function setBgColor(color) {
     document.getElementById('poster').style.backgroundColor = color;
     document.getElementById('bgColorPicker').value = color;
     document.getElementById('bgColorInput').value = color;
+}
+
+// ===== 背景模式：top（仅顶部 280px）/ full（覆盖整个海报） =====
+var currentBgMode = 'top';
+function setBgMode(mode) {
+    if (mode !== 'full') mode = 'top';
+    currentBgMode = mode;
+    var poster = document.getElementById('poster');
+    if (mode === 'full') {
+        poster.classList.add('bg-mode-full');
+    } else {
+        poster.classList.remove('bg-mode-full');
+    }
+    // 同步按钮 active 样式
+    var topBtn = document.getElementById('bgModeTopBtn');
+    var fullBtn = document.getElementById('bgModeFullBtn');
+    if (topBtn && fullBtn) {
+        if (mode === 'top') {
+            topBtn.style.cssText = 'flex:1;padding:8px;border:1px solid #3498db;background:#e8f4fd;color:#3498db;border-radius:4px;cursor:pointer;font-size:12px;';
+            fullBtn.style.cssText = 'flex:1;padding:8px;border:1px solid #ddd;background:white;border-radius:4px;cursor:pointer;font-size:12px;';
+        } else {
+            fullBtn.style.cssText = 'flex:1;padding:8px;border:1px solid #3498db;background:#e8f4fd;color:#3498db;border-radius:4px;cursor:pointer;font-size:12px;';
+            topBtn.style.cssText = 'flex:1;padding:8px;border:1px solid #ddd;background:white;border-radius:4px;cursor:pointer;font-size:12px;';
+        }
+    }
 }
 
 function uploadBgImg(input) {
@@ -2026,6 +2150,53 @@ function updateTitle() {
     } else {
         wrapper.classList.remove('has-content');
     }
+
+    // 应用字号和颜色（来自标题设置面板的样式控件）
+    var mainSize = document.getElementById('mainTitleFontSize');
+    var mainColor = document.getElementById('mainTitleColor');
+    if (mainSize && mainSize.value) titleEl.style.fontSize = mainSize.value + 'px';
+    if (mainColor && mainColor.value) titleEl.style.color = mainColor.value;
+
+    var subSize = document.getElementById('subTitleFontSize');
+    var subColor = document.getElementById('subTitleColor');
+    if (subSize && subSize.value) subtitleEl.style.fontSize = subSize.value + 'px';
+    if (subColor && subColor.value) subtitleEl.style.color = subColor.value;
+
+    var tagSize = document.getElementById('topTagFontSize');
+    var tagColor = document.getElementById('topTagColor');
+    var tagBg = document.getElementById('topTagBgColor');
+    var tagEl = document.getElementById('topTagText');
+    if (tagSize && tagSize.value) tagEl.style.fontSize = tagSize.value + 'px';
+    if (tagColor && tagColor.value) tagEl.style.color = tagColor.value;
+    if (tagBg && tagBg.value) tagEl.style.background = tagBg.value;
+}
+
+// 收集标题样式（供保存可编辑版本使用）
+function collectTitleStyle() {
+    function v(id) { var el = document.getElementById(id); return el ? el.value : ''; }
+    return {
+        mainSize: v('mainTitleFontSize'),
+        mainColor: v('mainTitleColor'),
+        subSize: v('subTitleFontSize'),
+        subColor: v('subTitleColor'),
+        tagSize: v('topTagFontSize'),
+        tagColor: v('topTagColor'),
+        tagBg: v('topTagBgColor')
+    };
+}
+
+// 恢复标题样式
+function restoreTitleStyle(ts) {
+    if (!ts) return;
+    function s(id, val) { var el = document.getElementById(id); if (el && val) el.value = val; }
+    s('mainTitleFontSize', ts.mainSize);
+    s('mainTitleColor', ts.mainColor);
+    s('subTitleFontSize', ts.subSize);
+    s('subTitleColor', ts.subColor);
+    s('topTagFontSize', ts.tagSize);
+    s('topTagColor', ts.tagColor);
+    s('topTagBgColor', ts.tagBg);
+    updateTitle();
 }
 
 function uploadLogo(input) {
@@ -3565,6 +3736,9 @@ function exportHTML() {
             z-index: 1; 
             pointer-events: none; 
         }
+        /* 背景模式：full 时背景图覆盖整个海报，淡出层隐藏 */
+        .poster.bg-mode-full .poster-bg-layer { height: 100%; bottom: 0; }
+        .poster.bg-mode-full .poster-bg-fade { display: none; }
         
         /* 顶部标签包装器 */
         .poster-top-tag-wrapper { 
@@ -3648,7 +3822,7 @@ function exportHTML() {
             margin: 10px 0 12px; 
             color: ${themeColor}; 
             display: inline-block; /* 关键：让下划线只跟着文字走 */
-            border-bottom: 3px solid ${themeColor}; /* 下划线样式 */
+            border-bottom: 3px solid currentColor; /* 下划线颜色跟随文字颜色 */
             padding-bottom: 0px; /* 文字和下划线之间的距离 */
         }
         .editor-content h2 { 
@@ -3781,7 +3955,7 @@ function exportHTML() {
         .divider-line, .divider-dashed, .divider-dotted { 
             border: none; 
             height: 2px; 
-            margin: 20px 0; 
+            margin: 35px 0; 
         }
         .divider-line { 
             background: #ddd; 
@@ -3815,11 +3989,13 @@ function exportHTML() {
         /* 浮动元素 */
         .float-item { 
             position: absolute; 
+            z-index: 100;
         }
         .float-item img { 
             display: block; 
             border-radius: 4px; 
-            max-width: 150px; 
+            width: 100%;
+            height: auto;
         }
         .float-item .float-content { 
             font-size: 48px; 
@@ -5729,7 +5905,7 @@ function addIcon(icon) {
         '<div class="resize-handle se" onmousedown="startFloatResize(event, \'' + id + '\', \'se\')"></div>' +
         '<div class="delete-btn" onclick="deleteFloat(\'' + id + '\')">×</div>';
 
-    document.getElementById('posterBody').appendChild(el);
+    document.getElementById('poster').appendChild(el);
     selectFloat(el);
     hideModal('iconModal');
     showToast('图标已添加，可拖拽移动、四角缩放');
@@ -5762,7 +5938,7 @@ function addSticker(src) {
         '<div class="resize-handle se" onmousedown="startFloatResize(event, \'' + id + '\', \'se\')"></div>' +
         '<div class="delete-btn" onclick="deleteFloat(\'' + id + '\')">×</div>';
 
-    document.getElementById('posterBody').appendChild(el);
+    document.getElementById('poster').appendChild(el);
     selectFloat(el);
     showToast('贴纸已添加，可拖拽移动、四角缩放');
 }
@@ -5829,9 +6005,19 @@ function startFloatResize(e, id, dir) {
 
 // 浮动项拖拽系统
 function initFloatSystem() {
+    // 把历史保存中可能位于 posterBody 内的 float-item 迁移到 poster 下（全范围活动）
+    var poster = document.getElementById('poster');
     var posterBody = document.getElementById('posterBody');
-    
-    posterBody.addEventListener('mousedown', function(e) {
+    if (posterBody && poster) {
+        posterBody.querySelectorAll(':scope > .float-item').forEach(function(it) {
+            poster.appendChild(it);
+        });
+    }
+    // 防止重复绑定
+    if (poster.dataset.floatSystemBound === '1') return;
+    poster.dataset.floatSystemBound = '1';
+
+    poster.addEventListener('mousedown', function(e) {
         var item = e.target.closest('.float-item');
         if (item) {
             if (e.target.classList.contains('resize-handle') || e.target.classList.contains('delete-btn') || e.target.classList.contains('edit-btn')) return;
@@ -5855,7 +6041,7 @@ function initFloatSystem() {
     });
     
     // 双击编辑按钮
-    posterBody.addEventListener('dblclick', function(e) {
+    poster.addEventListener('dblclick', function(e) {
         var item = e.target.closest('.float-button');
         if (item) {
             e.preventDefault();
@@ -6238,13 +6424,16 @@ function collectEditorState() {
         highlightBgDark: getComputedStyle(document.documentElement).getPropertyValue('--highlight-bg-dark').trim(),
         floatItems: collectFloatItems(),
         posterBodyHTML: document.getElementById('posterBody').innerHTML,
-        sliceMarkers: sliceMarkers.slice()
+        sliceMarkers: sliceMarkers.slice(),
+        bgMode: currentBgMode,
+        titleStyle: collectTitleStyle()
     };
 }
 
 function collectFloatItems() {
     var items = [];
-    document.querySelectorAll('#posterBody > .float-item').forEach(function(el) {
+    // 现在贴纸/图标挂在 #poster 上（活动范围全海报）；兼容历史挂在 #posterBody 的写法
+    document.querySelectorAll('#poster > .float-item, #posterBody > .float-item').forEach(function(el) {
         items.push({
             id: el.id,
             className: el.className.replace(' selected', ''),
@@ -6279,10 +6468,26 @@ function restoreEditorState(state) {
         // 确保编辑器 contenteditable 设为 true
         var editor = document.getElementById('editor');
         if (editor) editor.setAttribute('contenteditable', 'true');
-        // 重新初始化浮动项系统
+        // 重新初始化浮动项系统（会把 posterBody 内的历史贴纸迁移到 poster）
         initFloatSystem();
     } else if (state.editorContent) {
         document.getElementById('editor').innerHTML = state.editorContent;
+    }
+
+    // 浮动元素（贴纸/图标）：从 state.floatItems 恢复到 #poster
+    if (state.floatItems && state.floatItems.length > 0) {
+        var posterEl = document.getElementById('poster');
+        // 清掉当前 poster 与 posterBody 下已有的浮动元素，避免重复
+        posterEl.querySelectorAll(':scope > .float-item').forEach(function(el){ el.remove(); });
+        document.getElementById('posterBody').querySelectorAll(':scope > .float-item').forEach(function(el){ el.remove(); });
+        state.floatItems.forEach(function(it) {
+            var d = document.createElement('div');
+            d.id = it.id || ('float_' + Date.now() + '_' + Math.random().toString(36).slice(2,6));
+            d.className = it.className || 'float-item';
+            if (it.style) d.setAttribute('style', it.style);
+            d.innerHTML = it.innerHTML || '';
+            posterEl.appendChild(d);
+        });
     }
 
     // 底部Logo
@@ -6321,6 +6526,16 @@ function restoreEditorState(state) {
     if (state.sliceMarkers && state.sliceMarkers.length > 0) {
         sliceMarkers = state.sliceMarkers.slice();
         setTimeout(renderSliceMarkers, 200);
+    }
+
+    // 背景模式
+    if (state.bgMode) {
+        setBgMode(state.bgMode);
+    }
+
+    // 标题样式
+    if (state.titleStyle) {
+        restoreTitleStyle(state.titleStyle);
     }
 }
 
