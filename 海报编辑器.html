@@ -52,9 +52,18 @@
         .poster { width: 750px; box-shadow: 0 10px 40px rgba(0,0,0,0.4); background-color: var(--bg-color, #a61b1b); position: relative; }
         .poster-bg-layer { position: absolute; top: 0; left: 0; right: 0; height: 280px; z-index: 0; background-size: cover; background-position: center; background-repeat: no-repeat; }
         .poster-bg-fade { position: absolute; top: 150px; left: 0; right: 0; height: 130px; background: linear-gradient(to bottom, rgba(255,255,255,0) 0%, var(--bg-color, #a61b1b) 100%); z-index: 1; pointer-events: none; }
-        /* 背景模式：full 时背景图覆盖整个海报，淡出层隐藏 */
-        .poster.bg-mode-full .poster-bg-layer { height: 100%; bottom: 0; }
-        .poster.bg-mode-full .poster-bg-fade { display: none; }
+        /* 背景模式：full 时背景图按高度铺满海报、宽度自适应居中（保留默认 cover），底部融合到主题色 */
+        .poster.bg-mode-full .poster-bg-layer {
+            height: 100%;
+            bottom: 0;
+            /* background-size: cover 与 background-position: center 继承自基础规则，不再覆盖 */
+        }
+        .poster.bg-mode-full .poster-bg-fade {
+            top: auto;
+            bottom: 0;
+            height: 180px;
+            background: linear-gradient(to top, var(--bg-color, #a61b1b) 0%, rgba(255,255,255,0) 100%);
+        }
         .poster-top-tag-wrapper { margin: 0 20px; padding-top: 20px; position: relative; z-index: 1; display: none; }
         .poster-top-tag-wrapper.has-content { display: block; }
         .poster-top-tag { background: #e52424; color: #fff; padding: 4px 16px; border-radius: 4px; font-size:18px; font-weight: 600; display: inline-block; margin-bottom: 1px; }
@@ -138,7 +147,7 @@
         .divider-dashed { background: repeating-linear-gradient(90deg, #ddd, #ddd 10px, transparent 10px, transparent 20px); }
         .divider-dotted { background: repeating-linear-gradient(90deg, #ddd, #ddd 4px, transparent 4px, transparent 8px); }
         
-        .poster-footer { height: 100px; background: transparent; display: flex; align-items: center; justify-content: center; padding-bottom: 20px; }
+        .poster-footer { height: 100px; background: transparent; display: flex; align-items: center; justify-content: center; padding-bottom: 20px; position: relative; z-index: 150; }
         .footer-logo { max-width: 40%; height: 40px; object-fit: contain; }
         
         .zoom-control { position: fixed; bottom: 20px; right: 20px; background: white; border-radius: 25px; padding: 8px 12px; display: flex; align-items: center; gap: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.3); z-index: 100; }
@@ -146,9 +155,18 @@
         
         .modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); z-index: 2000; align-items: center; justify-content: center; }
         .modal.show { display: flex; }
-        /* 取色器/吸管激活时：临时移除蒙版和弹窗内容，方便从画布吸取真实颜色 */
-        .modal.picker-open { background: transparent !important; pointer-events: none !important; }
-        .modal.picker-open .modal-content { visibility: hidden !important; }
+        /* 颜色弹窗特殊处理：不要灰色蒙版、不阻挡画布交互，方便使用吸管 */
+        #colorModal { background: transparent !important; pointer-events: none !important; }
+        #colorModal .modal-content {
+            pointer-events: auto !important;
+            box-shadow: 0 10px 35px rgba(0,0,0,0.45);
+            border: 1px solid rgba(0,0,0,0.08);
+            position: relative;
+            margin-left: auto;   /* 弹窗右上区域，避免遮住中央画布 */
+            margin-right: 24px;
+            margin-top: 24px;
+            align-self: flex-start;
+        }
         .modal-content { background: white; border-radius: 8px; padding: 20px; width: 380px; max-height: 80vh; overflow-y: auto; }
         .crop-modal-content { width: 600px; max-width: 90vw; }
         .crop-container { position: relative; display: inline-block; max-width: 100%; background: #f0f0f0; }
@@ -181,6 +199,33 @@
         .float-item .resize-handle.se { bottom: -6px; right: -6px; cursor: se-resize; }
         .float-item .delete-btn { position: absolute; top: -10px; right: -10px; width: 20px; height: 20px; background: #ff6b6b; color: white; border-radius: 50%; display: none; align-items: center; justify-content: center; font-size: 12px; cursor: pointer; z-index: 102; }
         .float-item.selected .delete-btn { display: flex; }
+        /* 贴纸/图标的旋转手柄 */
+        .float-item .rotate-handle {
+            position: absolute; top: -34px; left: 50%; margin-left: -12px;
+            width: 24px; height: 24px;
+            background: #9b59b6; color: white;
+            border: 2px solid white; border-radius: 50%;
+            display: none; align-items: center; justify-content: center;
+            font-size: 14px; line-height: 1; cursor: grab;
+            z-index: 103; user-select: none; box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+        }
+        .float-item .rotate-handle::before {
+            content: ''; position: absolute; top: 22px; left: 50%; width: 1px; height: 10px;
+            background: rgba(155, 89, 182, 0.7);
+        }
+        .float-item.selected .rotate-handle { display: flex; }
+        .float-item .rotate-handle:active { cursor: grabbing; }
+        /* 贴纸的裁剪按钮（左上角，仅图片贴纸出现） */
+        .float-item .crop-float-btn {
+            position: absolute; top: -10px; left: -10px;
+            width: 22px; height: 22px;
+            background: #27ae60; color: white;
+            border: 2px solid white; border-radius: 50%;
+            display: none; align-items: center; justify-content: center;
+            font-size: 11px; cursor: pointer; z-index: 102;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+        }
+        .float-item.selected.has-image .crop-float-btn { display: flex; }
         
         /* 链接样式 - 调整下划线距离 */
         .editor-content a { 
@@ -497,7 +542,7 @@
                         </select>
                     </div>
                 </div>
-                <button class="tool-btn" onclick="showColor()"><i class="fas fa-palette"></i><span>颜色</span></button>
+                <button class="tool-btn" onmousedown="event.preventDefault()" onclick="showColor()"><i class="fas fa-palette"></i><span>颜色</span></button>
             </div>
         </div>
         <div class="tool-group">
@@ -717,18 +762,21 @@
     
     <div class="modal" id="colorModal">
         <div class="modal-content">
-            <div class="modal-title">选择颜色（先选中文字）</div>
+            <div class="modal-title" style="display:flex;align-items:center;justify-content:space-between;">
+                <span>选择颜色</span>
+                <span style="font-size:11px;color:#999;font-weight:400;">弹窗常开，可连续点色 / 用吸管</span>
+            </div>
             <div class="color-mode-tabs">
-                <button class="color-mode-tab active" onclick="switchColorMode('foreColor', this)">文字颜色</button>
-                <button class="color-mode-tab" onclick="switchColorMode('hiliteColor', this)">背景高亮</button>
+                <button class="color-mode-tab active" onmousedown="event.preventDefault()" onclick="switchColorMode('foreColor', this)">文字颜色</button>
+                <button class="color-mode-tab" onmousedown="event.preventDefault()" onclick="switchColorMode('hiliteColor', this)">背景高亮</button>
             </div>
             <div class="color-grid" id="colorGrid"></div>
             <div style="margin-top:15px;padding-top:12px;border-top:1px solid #eee;">
-                <div style="font-size:12px;color:#555;margin-bottom:6px;font-weight:600;">自定义颜色</div>
+                <div style="font-size:12px;color:#555;margin-bottom:6px;font-weight:600;">自定义颜色（选色或吸管直接应用）</div>
                 <div style="display:flex;gap:8px;align-items:center;">
-                    <input type="color" id="customColorPicker" value="#a61b1b" style="width:48px;height:36px;padding:0;border:1px solid #ddd;border-radius:4px;cursor:pointer;background:none;" oninput="syncCustomColorHex(this.value)">
+                    <input type="color" id="customColorPicker" value="#a61b1b" style="width:42px;height:36px;padding:0;border:1px solid #ddd;border-radius:4px;cursor:pointer;background:none;" oninput="syncCustomColorHex(this.value)">
+                    <button class="modal-btn modal-btn-primary" onmousedown="event.preventDefault()" onclick="pickColorFromScreen()" title="吸管：从屏幕任意位置吸取颜色并直接应用" style="margin:0;padding:0;width:42px;height:36px;display:flex;align-items:center;justify-content:center;background:#9b59b6;font-size:14px;"><i class="fas fa-eye-dropper"></i></button>
                     <input type="text" id="customColorHex" value="#a61b1b" placeholder="#RRGGBB" style="flex:1;padding:8px;border:1px solid #ddd;border-radius:4px;font-size:13px;font-family:monospace;" oninput="syncCustomColorPicker(this.value)" onkeydown="if(event.key==='Enter'){applyCustomColor()}">
-                    <button class="modal-btn modal-btn-primary" onclick="applyCustomColor()" style="margin:0;">应用</button>
                 </div>
                 <div id="recentColorsRow" style="margin-top:10px;display:none;">
                     <div style="font-size:11px;color:#888;margin-bottom:4px;">最近使用</div>
@@ -736,7 +784,7 @@
                 </div>
             </div>
             <div style="margin-top:15px;padding-top:12px;border-top:1px solid #eee;">
-                <button class="btn-small" onclick="clearColorFormat()" style="width:100%;color:#e74c3c;"><i class="fas fa-eraser"></i> 清除颜色格式</button>
+                <button class="btn-small" onmousedown="event.preventDefault()" onclick="clearColorFormat()" style="width:100%;color:#e74c3c;"><i class="fas fa-eraser"></i> 清除颜色格式</button>
             </div>
             <div style="text-align:right;margin-top:15px;"><button class="modal-btn modal-btn-default" onclick="hideModal('colorModal')">关闭</button></div>
         </div>
@@ -1125,7 +1173,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 function init() {
     var html = '';
-    colors.forEach(function(c) { html += '<div class="color-opt" style="background:'+c+'" onclick="applyColor(\''+c+'\')"></div>'; });
+    colors.forEach(function(c) { html += '<div class="color-opt" style="background:'+c+'" onmousedown="event.preventDefault()" onclick="applyColor(\''+c+'\')"></div>'; });
     document.getElementById('colorGrid').innerHTML = html;
     
     var iconHtml = '';
@@ -1144,6 +1192,12 @@ function init() {
 
     // 初始化表格模块（事件委托、外部点击关闭、滚动跟随等）
     try { _initTableSystem(); } catch(e) {}
+
+    // 防御性：清掉 toast / slide-toast 的 .show 类（兼容历史导出版本中可能卡住的提醒）
+    var _t = document.getElementById('toast');
+    if (_t) _t.classList.remove('show');
+    var _st = document.getElementById('slideToast');
+    if (_st) _st.classList.remove('show');
 }
 
 function fillInitialContent(data) {
@@ -1751,48 +1805,85 @@ function showColor() {
     if (sel.rangeCount > 0 && !sel.isCollapsed) {
         savedRange = sel.getRangeAt(0).cloneRange();
     }
-    document.getElementById('colorModal').classList.add('show');
+    var modal = document.getElementById('colorModal');
+    // 清掉历史遗留的 picker-open 状态（防御性）
+    modal.classList.remove('picker-open');
+    modal.classList.add('show');
     _renderRecentColors();
-    _bindCustomColorPickerHideMask();
+    _bindCustomColorPickerSync();
 }
 
-// 取色器打开/关闭时移除/恢复 colorModal 的灰色蒙版，方便吸管真实采样
+// 屏幕吸管：直接采集屏幕上任意位置的颜色（Chrome 95+ 支持 EyeDropper API）
+async function pickColorFromScreen() {
+    // 先保存当前选区（如果用户在编辑器里仍有选区）
+    var sel = window.getSelection();
+    if (sel && sel.rangeCount > 0 && !sel.isCollapsed) {
+        savedRange = sel.getRangeAt(0).cloneRange();
+    }
+    if (!savedRange) {
+        showToast('请先在画布中选中要染色的文字');
+        return;
+    }
+    if (typeof window.EyeDropper !== 'function') {
+        // 浏览器不支持原生 EyeDropper（Firefox/Safari）→ 提示并退回到点开自定义色块
+        showToast('当前浏览器不支持原生吸管，请使用旁边的色块打开调色板');
+        return;
+    }
+    try {
+        var dropper = new EyeDropper();
+        var result = await dropper.open();
+        if (result && result.sRGBHex) {
+            // 同步到自定义颜色块和 hex 输入
+            syncCustomColorHex(result.sRGBHex);
+            syncCustomColorPicker(result.sRGBHex);
+            applyColor(result.sRGBHex);
+        }
+    } catch (err) {
+        if (err && err.name === 'AbortError') {
+            // 用户取消，不提示
+            return;
+        }
+        console.warn('EyeDropper 错误:', err);
+        showToast('吸管取色失败');
+    }
+}
+
+// 同步原生取色器到 hex 输入框（吸管/调色板选定颜色后实时同步显示）
 var _customColorPickerBound = false;
-function _bindCustomColorPickerHideMask() {
+function _bindCustomColorPickerSync() {
     if (_customColorPickerBound) return;
     var picker = document.getElementById('customColorPicker');
     if (!picker) return;
     _customColorPickerBound = true;
-    var modal = document.getElementById('colorModal');
-    var hide = function() { if (modal) modal.classList.add('picker-open'); };
-    var show = function() {
-        if (!modal) return;
-        // 延迟一点恢复，避免点击穿透到底层导致弹窗立刻关闭
-        setTimeout(function(){ modal.classList.remove('picker-open'); }, 80);
-    };
-    // 点击原生取色器 → 进入吸管/调色板状态：移除蒙版
-    picker.addEventListener('mousedown', hide);
-    picker.addEventListener('focus', hide);
-    // 选定颜色或关闭后恢复蒙版
-    picker.addEventListener('change', function(e) { syncCustomColorHex(e.target.value); show(); });
-    picker.addEventListener('blur', show);
-    // input 持续触发时也保持隐藏（拖动滑块/吸管移动）
     picker.addEventListener('input', function(e) {
         syncCustomColorHex(e.target.value);
-        hide();
+    });
+    // 用户确定颜色（关闭原生 picker 或按 Enter）→ 自动应用一次
+    picker.addEventListener('change', function(e) {
+        syncCustomColorHex(e.target.value);
+        applyColor(e.target.value);
     });
 }
 
 function applyColor(color) {
     var editor = document.getElementById('editor');
-    editor.focus();
     var sel = window.getSelection();
-    
-    if (savedRange) {
-        sel.removeAllRanges();
-        sel.addRange(savedRange);
+
+    // 优先使用当前的活动选区（弹窗不再阻挡画布，用户可以随时重新选择文字）
+    var liveOk = sel && sel.rangeCount > 0 && !sel.isCollapsed
+        && editor.contains(sel.getRangeAt(0).commonAncestorContainer);
+
+    if (liveOk) {
+        savedRange = sel.getRangeAt(0).cloneRange();
+    } else if (savedRange) {
+        // 退回到上次保存的选区
+        editor.focus();
+        try {
+            sel.removeAllRanges();
+            sel.addRange(savedRange);
+        } catch (_) {}
     }
-    
+
     if (sel.rangeCount > 0 && !sel.isCollapsed) {
         if (currentColorMode === 'foreColor') {
             // 检查选区是否完整覆盖某个 H1（让下划线随之同步）
@@ -1807,9 +1898,7 @@ function applyColor(color) {
                 var selTxt = range.toString().replace(/\s+/g, '');
                 var h1Txt  = startH1.textContent.replace(/\s+/g, '');
                 if (selTxt && selTxt === h1Txt) {
-                    // 选中了整个 H1 文本 —— 直接设置 H1 的 color，下划线 currentColor 会自动跟随
                     startH1.style.color = color;
-                    // 清掉内部的 inline color，避免被覆盖
                     startH1.querySelectorAll('font[color], [style*="color"]').forEach(function(s) {
                         if (s.tagName === 'FONT') s.removeAttribute('color');
                         if (s.style && s.style.color) {
@@ -1818,9 +1907,8 @@ function applyColor(color) {
                         }
                     });
                     _pushRecentColor(color);
-                    hideModal('colorModal');
+                    _refreshSavedRangeAfterApply();
                     showToast('颜色已应用（H1 下划线同步）');
-                    savedRange = null;
                     return;
                 }
             }
@@ -1829,12 +1917,21 @@ function applyColor(color) {
             document.execCommand('hiliteColor', false, color);
         }
         _pushRecentColor(color);
-        hideModal('colorModal');
+        _refreshSavedRangeAfterApply();
         showToast('颜色已应用');
-        savedRange = null;
     } else {
         showToast('请先选中文字');
     }
+}
+
+// 应用颜色后刷新 savedRange，保持弹窗常开、可连续应用
+function _refreshSavedRangeAfterApply() {
+    try {
+        var sel2 = window.getSelection();
+        if (sel2 && sel2.rangeCount > 0 && !sel2.isCollapsed) {
+            savedRange = sel2.getRangeAt(0).cloneRange();
+        }
+    } catch (_) {}
 }
 
 // ===== 自定义颜色：picker / hex 输入互相同步、应用、最近使用记忆 =====
@@ -1884,7 +1981,7 @@ function _renderRecentColors() {
     if (arr.length === 0) { row.style.display = 'none'; return; }
     row.style.display = 'block';
     box.innerHTML = arr.map(function(c) {
-        return '<div title="' + c + '" onclick="applyColor(\'' + c + '\')" style="width:24px;height:24px;border-radius:4px;border:1px solid #ddd;cursor:pointer;background:' + c + ';"></div>';
+        return '<div title="' + c + '" onmousedown="event.preventDefault()" onclick="applyColor(\'' + c + '\')" style="width:24px;height:24px;border-radius:4px;border:1px solid #ddd;cursor:pointer;background:' + c + ';"></div>';
     }).join('');
 }
 
@@ -3590,6 +3687,17 @@ document.getElementById('editor').addEventListener('keydown', function(e) {
 function hideModal(id) { 
     document.getElementById(id).classList.remove('show'); 
     if (id === 'colorModal') savedRange = null;
+    // 裁剪弹窗关闭时恢复浮动元素旋转（如取消裁剪）
+    if (id === 'cropModal' && currentCropImgId) {
+        var el = document.getElementById(currentCropImgId);
+        if (el && el.classList && el.classList.contains('float-item') && el.dataset._savedTransform !== undefined) {
+            if (el.dataset._savedTransform) {
+                el.style.transform = el.dataset._savedTransform;
+            }
+            delete el.dataset._savedTransform;
+        }
+        currentCropImgId = null;
+    }
 }
 function togglePanel(header) { header.parentElement.classList.toggle('open'); }
 
@@ -3598,9 +3706,11 @@ function exportJPG() {
     if (activeFloat) {
         activeFloat.classList.remove('selected');
     }
+    // 固化贴纸/图标位置，杜绝偏移
+    _snapshotFloatPositionsForExport();
     
     // 隐藏所有控件和分隔线
-    var tools = document.querySelectorAll('.cell-tools, .resize-handle, .delete-btn, .crop-btn, .img-resizer, .float-item .resize-handle, .float-item .delete-btn, .btn-edit-trigger');
+    var tools = document.querySelectorAll('.cell-tools, .resize-handle, .delete-btn, .crop-btn, .img-resizer, .float-item .resize-handle, .float-item .delete-btn, .float-item .rotate-handle, .float-item .crop-float-btn, .btn-edit-trigger');
     tools.forEach(function(el) { el.style.display = 'none'; });
 
     // 临时移除 zoom transform，防止缩放导致 html2canvas 位置计算错误
@@ -3636,10 +3746,12 @@ function exportHTML() {
     if (activeFloat) {
         activeFloat.classList.remove('selected');
     }
+    // 导出前把所有 float-item 的实际像素位置/尺寸快照写到 inline style，避免任何环境下的偏移
+    _snapshotFloatPositionsForExport();
     
     // 克隆poster并移除控件
     var poster = document.getElementById('poster').cloneNode(true);
-    var tools = poster.querySelectorAll('.cell-tools, .resize-handle, .delete-btn, .crop-btn, .img-resizer, .float-item .resize-handle, .float-item .delete-btn, .btn-edit-trigger');
+    var tools = poster.querySelectorAll('.cell-tools, .resize-handle, .delete-btn, .crop-btn, .img-resizer, .float-item .resize-handle, .float-item .delete-btn, .float-item .rotate-handle, .float-item .crop-float-btn, .btn-edit-trigger');
     tools.forEach(function(el) { el.remove(); });
     
     // 移除选中状态
@@ -3736,9 +3848,17 @@ function exportHTML() {
             z-index: 1; 
             pointer-events: none; 
         }
-        /* 背景模式：full 时背景图覆盖整个海报，淡出层隐藏 */
-        .poster.bg-mode-full .poster-bg-layer { height: 100%; bottom: 0; }
-        .poster.bg-mode-full .poster-bg-fade { display: none; }
+        /* 背景模式：full 时背景图按高度铺满海报、宽度自适应居中（保留默认 cover），底部融合到主题色 */
+        .poster.bg-mode-full .poster-bg-layer {
+            height: 100%;
+            bottom: 0;
+        }
+        .poster.bg-mode-full .poster-bg-fade {
+            top: auto;
+            bottom: 0;
+            height: 180px;
+            background: linear-gradient(to top, ${themeColor} 0%, rgba(255,255,255,0) 100%);
+        }
         
         /* 顶部标签包装器 */
         .poster-top-tag-wrapper { 
@@ -3828,7 +3948,7 @@ function exportHTML() {
         .editor-content h2 { 
             font-size: 28px; 
             font-weight: 600; 
-            margin: 5px 0 2px; 
+            margin: 2px 0 2px; 
             color: ${themeColor}; 
         }
         .editor-content h3 { 
@@ -3846,7 +3966,26 @@ function exportHTML() {
             margin: 0 0 8px 0; 
             font-size: 18px; 
             text-align: justify; 
-            line-height: 1.5;
+        }
+        /* 列表样式（与编辑器保持一致） */
+        .editor-content ul, .editor-content ol,
+        .text-box ul, .text-box ol,
+        .highlight-box ul, .highlight-box ol,
+        .tip-box ul, .tip-box ol {
+            margin: 6px 0 14px;
+            padding-left: 32px;
+        }
+        .editor-content ul, .text-box ul, .highlight-box ul, .tip-box ul { list-style-type: disc; }
+        .editor-content ol, .text-box ol, .highlight-box ol, .tip-box ol { list-style-type: decimal; }
+        .editor-content li, .text-box li, .highlight-box li, .tip-box li {
+            font-size: 18px;
+            line-height: 1.8;
+            margin-bottom: 4px;
+            text-align: justify;
+        }
+        .editor-content li::marker, .text-box li::marker, .highlight-box li::marker, .tip-box li::marker {
+            color: ${themeColor};
+            font-weight: 700;
         }
         .editor-content .annotation { 
             font-size: 12px; 
@@ -3975,6 +4114,8 @@ function exportHTML() {
             align-items: center; 
             justify-content: center; 
             padding-bottom: 20px; 
+            position: relative;
+            z-index: 150;
         }
         .footer-logo { 
             max-width: 40%; 
@@ -4001,6 +4142,11 @@ function exportHTML() {
             font-size: 48px; 
             line-height: 1; 
         }
+        /* 隐藏编辑期残留的控件（双保险） */
+        .float-item .resize-handle,
+        .float-item .delete-btn,
+        .float-item .rotate-handle,
+        .float-item .crop-float-btn { display: none !important; }
         
         /* 按钮样式 */
         .editor-btn-wrapper { 
@@ -4047,7 +4193,7 @@ function showToast(msg) {
     setTimeout(function() { toast.classList.remove('show'); }, 2000);
 }
 
-// 上滑提醒 Toast：从底部滑入，停留更长时间，醒目色
+// 上滑提醒 Toast：从底部滑入，约 2 秒后渐隐
 function showSlideToast(msg, duration) {
     var toast = document.getElementById('slideToast');
     if (!toast) { showToast(msg); return; }
@@ -4056,7 +4202,7 @@ function showSlideToast(msg, duration) {
     toast.classList.remove('show');
     void toast.offsetWidth;
     toast.classList.add('show');
-    var t = duration || 3800;
+    var t = duration || 2000;
     clearTimeout(toast._hideTimer);
     toast._hideTimer = setTimeout(function() {
         toast.classList.remove('show');
@@ -5872,6 +6018,17 @@ function applyCrop() {
         var originalEl = document.getElementById(currentCropImgId);
         var originalImg = originalEl.tagName === 'IMG' ? originalEl : originalEl.querySelector('img');
         if (originalImg) originalImg.src = croppedSrc;
+
+        // 浮动贴纸（float-item）：清掉固定高度，恢复旋转
+        if (originalEl && originalEl.classList && originalEl.classList.contains('float-item')) {
+            originalEl.style.height = '';
+            if (originalEl.dataset._savedTransform !== undefined) {
+                if (originalEl.dataset._savedTransform) {
+                    originalEl.style.transform = originalEl.dataset._savedTransform;
+                }
+                delete originalEl.dataset._savedTransform;
+            }
+        }
         
         hideModal('cropModal');
         showToast('裁剪完成');
@@ -5895,20 +6052,23 @@ function addIcon(icon) {
     var el = document.createElement('div');
     el.id = id;
     el.className = 'float-item';
-    el.style.left = '50px';
-    el.style.top = '100px';
-    el.style.fontSize = '48px';
+    var iconSize = 48;
+    var pos = _getVisibleCenterInPoster(iconSize, iconSize);
+    el.style.left = pos.x + 'px';
+    el.style.top = pos.y + 'px';
+    el.style.fontSize = iconSize + 'px';
     el.innerHTML = '<div class="float-content">' + icon + '</div>' +
         '<div class="resize-handle nw" onmousedown="startFloatResize(event, \'' + id + '\', \'nw\')"></div>' +
         '<div class="resize-handle ne" onmousedown="startFloatResize(event, \'' + id + '\', \'ne\')"></div>' +
         '<div class="resize-handle sw" onmousedown="startFloatResize(event, \'' + id + '\', \'sw\')"></div>' +
         '<div class="resize-handle se" onmousedown="startFloatResize(event, \'' + id + '\', \'se\')"></div>' +
+        '<div class="rotate-handle" onmousedown="startFloatRotate(event, \'' + id + '\')" title="按住拖拽旋转，按住 Shift 吸附到 15°">↻</div>' +
         '<div class="delete-btn" onclick="deleteFloat(\'' + id + '\')">×</div>';
 
     document.getElementById('poster').appendChild(el);
     selectFloat(el);
     hideModal('iconModal');
-    showToast('图标已添加，可拖拽移动、四角缩放');
+    showToast('图标已添加，可拖拽/缩放/旋转');
 }
 
 // 贴纸功能
@@ -5927,20 +6087,123 @@ function addSticker(src) {
     var id = 'float_' + Date.now();
     var el = document.createElement('div');
     el.id = id;
-    el.className = 'float-item';
-    el.style.left = '50px';
-    el.style.top = '100px';
-    el.style.width = '100px';
+    el.className = 'float-item has-image';
+    var stickerWidth = 100;
+    // 高度未知（图片加载后才能算），先按方形估算放置位置
+    var pos = _getVisibleCenterInPoster(stickerWidth, stickerWidth);
+    el.style.left = pos.x + 'px';
+    el.style.top = pos.y + 'px';
+    el.style.width = stickerWidth + 'px';
     el.innerHTML = '<img src="' + src + '">' +
         '<div class="resize-handle nw" onmousedown="startFloatResize(event, \'' + id + '\', \'nw\')"></div>' +
         '<div class="resize-handle ne" onmousedown="startFloatResize(event, \'' + id + '\', \'ne\')"></div>' +
         '<div class="resize-handle sw" onmousedown="startFloatResize(event, \'' + id + '\', \'sw\')"></div>' +
         '<div class="resize-handle se" onmousedown="startFloatResize(event, \'' + id + '\', \'se\')"></div>' +
+        '<div class="rotate-handle" onmousedown="startFloatRotate(event, \'' + id + '\')" title="按住拖拽旋转，按住 Shift 吸附到 15°">↻</div>' +
+        '<div class="crop-float-btn" onclick="cropFloatSticker(\'' + id + '\')" title="裁剪贴纸">✂</div>' +
         '<div class="delete-btn" onclick="deleteFloat(\'' + id + '\')">×</div>';
 
     document.getElementById('poster').appendChild(el);
+    // 图片真实尺寸加载后，按真实高度重新居中（仅当还未被用户拖动过）
+    var img = el.querySelector('img');
+    if (img) {
+        img.addEventListener('load', function() {
+            if (el.dataset._userMoved === '1') return;
+            var realH = el.offsetHeight || stickerWidth;
+            var pos2 = _getVisibleCenterInPoster(stickerWidth, realH);
+            el.style.left = pos2.x + 'px';
+            el.style.top = pos2.y + 'px';
+        }, { once: true });
+    }
     selectFloat(el);
-    showToast('贴纸已添加，可拖拽移动、四角缩放');
+    showToast('贴纸已添加，可拖拽/缩放/旋转/裁剪');
+}
+
+// 计算"当前可见画布区域"的中心点在 poster 内的 CSS 像素坐标
+// w/h 是即将放置的元素尺寸（用于让元素整体居中而非元素左上角对齐中心）
+function _getVisibleCenterInPoster(w, h) {
+    w = w || 0; h = h || 0;
+    var poster = document.getElementById('poster');
+    var preview = document.getElementById('previewArea');
+    if (!poster) return { x: 50, y: 100 };
+    var z = (typeof zoomLevel === 'number' && zoomLevel > 0) ? zoomLevel : 1;
+    var posterRect = poster.getBoundingClientRect();
+    var posterW = posterRect.width / z;   // CSS 像素宽
+    var posterH = posterRect.height / z;  // CSS 像素高
+    var cssX, cssY;
+    if (preview) {
+        var prevRect = preview.getBoundingClientRect();
+        // poster 与 preview 在屏幕上的可见交集
+        var visLeft   = Math.max(posterRect.left,   prevRect.left);
+        var visRight  = Math.min(posterRect.right,  prevRect.right);
+        var visTop    = Math.max(posterRect.top,    prevRect.top);
+        var visBottom = Math.min(posterRect.bottom, prevRect.bottom);
+        if (visRight > visLeft && visBottom > visTop) {
+            var scrX = (visLeft + visRight) / 2;
+            var scrY = (visTop + visBottom) / 2;
+            cssX = (scrX - posterRect.left) / z;
+            cssY = (scrY - posterRect.top) / z;
+        } else {
+            // 没有交集（极少见）：回退到 poster 中心
+            cssX = posterW / 2;
+            cssY = posterH / 2;
+        }
+    } else {
+        cssX = posterW / 2;
+        cssY = posterH / 2;
+    }
+    // 让元素整体居中（左上角 = 中心 - 一半宽高）
+    var x = Math.round(cssX - w / 2);
+    var y = Math.round(cssY - h / 2);
+    // 限制在海报范围内
+    x = Math.max(0, Math.min(x, Math.max(0, posterW - w)));
+    y = Math.max(0, Math.min(y, Math.max(0, posterH - h)));
+    return { x: x, y: y };
+}
+
+// 浮动项旋转：按住手柄拖拽，根据鼠标相对中心的角度变化更新 transform
+function startFloatRotate(e, id) {
+    e.preventDefault();
+    e.stopPropagation();
+    var el = document.getElementById(id);
+    if (!el) return;
+    selectFloat(el);
+    var rect = el.getBoundingClientRect();
+    var cx = rect.left + rect.width / 2;
+    var cy = rect.top + rect.height / 2;
+    var startAngleDeg = parseFloat(el.dataset.rotateAngle || '0');
+    var startMouseDeg = Math.atan2(e.clientY - cy, e.clientX - cx) * 180 / Math.PI;
+
+    function onMove(ev) {
+        var mouseDeg = Math.atan2(ev.clientY - cy, ev.clientX - cx) * 180 / Math.PI;
+        var newAngle = startAngleDeg + (mouseDeg - startMouseDeg);
+        // 按住 Shift 吸附到 15° 整数倍
+        if (ev.shiftKey) newAngle = Math.round(newAngle / 15) * 15;
+        // 归一化到 -180..180
+        while (newAngle > 180) newAngle -= 360;
+        while (newAngle < -180) newAngle += 360;
+        el.dataset.rotateAngle = newAngle;
+        el.style.transform = 'rotate(' + newAngle.toFixed(1) + 'deg)';
+    }
+    function onUp() {
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+    }
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+}
+
+// 裁剪贴纸：复用图片裁剪弹窗
+function cropFloatSticker(id) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    var img = el.querySelector('img');
+    if (!img) { showToast('该浮动元素没有可裁剪的图片'); return; }
+    // 裁剪期间临时清除旋转，避免裁剪坐标系混乱
+    var savedTransform = el.style.transform;
+    el.dataset._savedTransform = savedTransform || '';
+    el.style.transform = '';
+    openCropModal(id);
 }
 
 // 浮动项缩放
@@ -5957,10 +6220,12 @@ function startFloatResize(e, id, dir) {
     var btnContent = el.querySelector('.float-btn-content');
     var isIcon = floatContent !== null;
     var isButton = el.classList.contains('float-button');
+    // 当前画布缩放，把屏幕像素位移换回 CSS 像素
+    var z = (typeof zoomLevel === 'number' && zoomLevel > 0) ? zoomLevel : 1;
 
     function onMove(ev) {
-        var deltaX = ev.clientX - startX;
-        var deltaY = ev.clientY - startY;
+        var deltaX = (ev.clientX - startX) / z;
+        var deltaY = (ev.clientY - startY) / z;
         
         // 根据方向调整
         if (dir === 'nw' || dir === 'sw') {
@@ -6008,19 +6273,49 @@ function initFloatSystem() {
     // 把历史保存中可能位于 posterBody 内的 float-item 迁移到 poster 下（全范围活动）
     var poster = document.getElementById('poster');
     var posterBody = document.getElementById('posterBody');
+    if (!poster) return;
     if (posterBody && poster) {
         posterBody.querySelectorAll(':scope > .float-item').forEach(function(it) {
             poster.appendChild(it);
         });
     }
-    // 防止重复绑定
-    if (poster.dataset.floatSystemBound === '1') return;
-    poster.dataset.floatSystemBound = '1';
+    // 为旧版（无 has-image 类、无旋转/裁剪按钮的）贴纸补齐控件
+    document.querySelectorAll('.float-item').forEach(function(el) {
+        var hasImg = !!el.querySelector(':scope > img');
+        if (hasImg && !el.classList.contains('has-image')) el.classList.add('has-image');
+        if (!el.querySelector(':scope > .rotate-handle')) {
+            var rh = document.createElement('div');
+            rh.className = 'rotate-handle';
+            rh.title = '按住拖拽旋转，按住 Shift 吸附到 15°';
+            rh.textContent = '↻';
+            rh.onmousedown = function(ev) { startFloatRotate(ev, el.id); };
+            el.appendChild(rh);
+        }
+        if (hasImg && !el.querySelector(':scope > .crop-float-btn')) {
+            var cb = document.createElement('div');
+            cb.className = 'crop-float-btn';
+            cb.title = '裁剪贴纸';
+            cb.textContent = '✂';
+            cb.onclick = function() { cropFloatSticker(el.id); };
+            el.appendChild(cb);
+        }
+    });
 
-    poster.addEventListener('mousedown', function(e) {
+    // 每次都重新绑定（独立版本恢复 SAVED_STATE 时也能稳定生效）
+    if (poster._floatMousedownHandler) {
+        poster.removeEventListener('mousedown', poster._floatMousedownHandler);
+    }
+    if (poster._floatDblclickHandler) {
+        poster.removeEventListener('dblclick', poster._floatDblclickHandler);
+    }
+    poster._floatMousedownHandler = function(e) {
         var item = e.target.closest('.float-item');
         if (item) {
-            if (e.target.classList.contains('resize-handle') || e.target.classList.contains('delete-btn') || e.target.classList.contains('edit-btn')) return;
+            if (e.target.classList.contains('resize-handle') ||
+                e.target.classList.contains('delete-btn') ||
+                e.target.classList.contains('edit-btn') ||
+                e.target.classList.contains('rotate-handle') ||
+                e.target.classList.contains('crop-float-btn')) return;
             // 如果是按钮的文字内容，不阻止默认行为（允许编辑）
             if (item.classList.contains('float-button') && e.target.classList.contains('float-btn-content')) {
                 selectFloat(item);
@@ -6032,22 +6327,22 @@ function initFloatSystem() {
         } else {
             if (activeFloat) {
                 activeFloat.classList.remove('selected');
-                // 隐藏编辑按钮
                 var editBtn = activeFloat.querySelector('.edit-btn');
                 if (editBtn) editBtn.style.display = 'none';
                 activeFloat = null;
             }
         }
-    });
-    
-    // 双击编辑按钮
-    poster.addEventListener('dblclick', function(e) {
+    };
+    poster._floatDblclickHandler = function(e) {
         var item = e.target.closest('.float-button');
         if (item) {
             e.preventDefault();
             editButton(item.id);
         }
-    });
+    };
+    poster.addEventListener('mousedown', poster._floatMousedownHandler);
+    poster.addEventListener('dblclick', poster._floatDblclickHandler);
+    poster.dataset.floatSystemBound = '1';
 }
 
 function selectFloat(el) {
@@ -6071,10 +6366,14 @@ var floatDragEl = null, floatDragOffsetX = 0, floatDragOffsetY = 0;
 
 function startFloatDrag(el, e) {
     floatDragEl = el;
-    var rect = el.getBoundingClientRect();
+    // 用 left/top 直接计算偏移，旋转后也能稳定拖拽
+    // 同时除以画布缩放，确保鼠标位移与 CSS 像素 1:1 对应（导出时坐标才会正确）
+    var z = (typeof zoomLevel === 'number' && zoomLevel > 0) ? zoomLevel : 1;
     var parentRect = el.parentElement.getBoundingClientRect();
-    floatDragOffsetX = e.clientX - rect.left;
-    floatDragOffsetY = e.clientY - rect.top;
+    var elLeft = parseFloat(el.style.left) || 0;
+    var elTop = parseFloat(el.style.top) || 0;
+    floatDragOffsetX = (e.clientX - parentRect.left) / z - elLeft;
+    floatDragOffsetY = (e.clientY - parentRect.top) / z - elTop;
     
     document.addEventListener('mousemove', onFloatDrag);
     document.addEventListener('mouseup', stopFloatDrag);
@@ -6083,11 +6382,17 @@ function startFloatDrag(el, e) {
 function onFloatDrag(e) {
     if (!floatDragEl) return;
     e.preventDefault();
+    // 标记已被用户拖动过，避免后续异步事件（如贴纸图片 load 完成）覆盖位置
+    floatDragEl.dataset._userMoved = '1';
+    var z = (typeof zoomLevel === 'number' && zoomLevel > 0) ? zoomLevel : 1;
     var parentRect = floatDragEl.parentElement.getBoundingClientRect();
-    var newX = e.clientX - parentRect.left - floatDragOffsetX;
-    var newY = e.clientY - parentRect.top - floatDragOffsetY;
-    newX = Math.max(0, Math.min(newX, parentRect.width - floatDragEl.offsetWidth));
-    newY = Math.max(0, Math.min(newY, parentRect.height - floatDragEl.offsetHeight));
+    // parentRect 是屏幕像素，要换回 CSS 像素
+    var newX = (e.clientX - parentRect.left) / z - floatDragOffsetX;
+    var newY = (e.clientY - parentRect.top) / z - floatDragOffsetY;
+    var parentW = parentRect.width  / z;
+    var parentH = parentRect.height / z;
+    newX = Math.max(0, Math.min(newX, parentW - floatDragEl.offsetWidth));
+    newY = Math.max(0, Math.min(newY, parentH - floatDragEl.offsetHeight));
     floatDragEl.style.left = newX + 'px';
     floatDragEl.style.top = newY + 'px';
 }
@@ -6372,8 +6677,20 @@ function doExportEditable() {
     // 收集当前编辑器状态
     var state = collectEditorState();
 
+    // 序列化前先清掉 toast / slide-toast 的 .show，避免独立版本打开时出现"卡住的提醒"
+    var toastEl = document.getElementById('toast');
+    var slideToastEl = document.getElementById('slideToast');
+    var toastShow = toastEl && toastEl.classList.contains('show');
+    var slideShow = slideToastEl && slideToastEl.classList.contains('show');
+    if (toastShow) toastEl.classList.remove('show');
+    if (slideShow) slideToastEl.classList.remove('show');
+
     // 读取当前页面完整 HTML 源码
     var fullHtml = document.documentElement.outerHTML;
+
+    // 还原 toast 显示状态
+    if (toastShow) toastEl.classList.add('show');
+    if (slideShow) slideToastEl.classList.add('show');
 
     // 构建独立版本：在 <script> 开头注入状态恢复数据和标志
     var stateScript = '\n<script>\nvar IS_STANDALONE = true;\nvar SAVED_STATE = ' + JSON.stringify(state) + ';\n<\/script>\n';
@@ -6438,10 +6755,43 @@ function collectFloatItems() {
             id: el.id,
             className: el.className.replace(' selected', ''),
             style: el.getAttribute('style'),
+            rotateAngle: el.dataset.rotateAngle || '',
             innerHTML: el.innerHTML
         });
     });
     return items;
+}
+
+// 导出前把每个 float-item 的"当前可见"位置/尺寸固化到 inline style，
+// 兜底处理任何环境/CSS/缩放差异导致的导出位置偏移
+function _snapshotFloatPositionsForExport() {
+    var poster = document.getElementById('poster');
+    if (!poster) return;
+    var z = (typeof zoomLevel === 'number' && zoomLevel > 0) ? zoomLevel : 1;
+    var posterRect = poster.getBoundingClientRect();
+    poster.querySelectorAll(':scope > .float-item').forEach(function(el) {
+        // 暂存并清掉 transform，避免旋转影响 boundingRect 的"未旋转 top-left"判断
+        var savedTransform = el.style.transform;
+        if (savedTransform) el.style.transform = 'none';
+        // 取消选中态以免外框影响测量
+        var hadSel = el.classList.contains('selected');
+        if (hadSel) el.classList.remove('selected');
+        var rect = el.getBoundingClientRect();
+        var cssX = (rect.left - posterRect.left) / z;
+        var cssY = (rect.top - posterRect.top) / z;
+        var cssW = rect.width / z;
+        var cssH = rect.height / z;
+        // 还原 transform 与选中态
+        if (savedTransform) el.style.transform = savedTransform;
+        if (hadSel) el.classList.add('selected');
+        // 写回 inline style（保留 transform、width 等，仅强制覆盖 left/top）
+        el.style.left = Math.round(cssX) + 'px';
+        el.style.top  = Math.round(cssY) + 'px';
+        // 如果之前没有显式 width，用测得的 width 固化（避免新环境下的不一致）
+        if (!el.style.width && cssW > 0) el.style.width = Math.round(cssW) + 'px';
+        // 高度通常 auto（图片自适应），不强制设置，除非已经存在
+        if (el.style.height && cssH > 0) el.style.height = Math.round(cssH) + 'px';
+    });
 }
 
 function restoreEditorState(state) {
@@ -6485,9 +6835,12 @@ function restoreEditorState(state) {
             d.id = it.id || ('float_' + Date.now() + '_' + Math.random().toString(36).slice(2,6));
             d.className = it.className || 'float-item';
             if (it.style) d.setAttribute('style', it.style);
+            if (it.rotateAngle) d.dataset.rotateAngle = it.rotateAngle;
             d.innerHTML = it.innerHTML || '';
             posterEl.appendChild(d);
         });
+        // 为可能缺少新控件（旋转/裁剪）的历史浮动元素补齐
+        setTimeout(function() { try { initFloatSystem(); } catch(_) {} }, 0);
     }
 
     // 底部Logo
@@ -6539,32 +6892,105 @@ function restoreEditorState(state) {
     }
 }
 
-// 独立版本的保存功能（下载覆盖自身）
-function saveStandaloneFile() {
-    showToast('正在保存...');
+// 独立版本的保存功能：优先使用 File System Access API 直接覆盖原文件，
+// 不支持时回退到下载新文件（旧行为）
+var _savedFileHandle = null;
+
+function _buildStandaloneHtml() {
     var state = collectEditorState();
+    // 序列化前清掉 toast / slide-toast 等临时浮层的 .show，避免独立版本打开时出现"卡住的提醒"
+    var toastEl = document.getElementById('toast');
+    var slideToastEl = document.getElementById('slideToast');
+    var toastShow = toastEl && toastEl.classList.contains('show');
+    var slideShow = slideToastEl && slideToastEl.classList.contains('show');
+    if (toastShow) toastEl.classList.remove('show');
+    if (slideShow) slideToastEl.classList.remove('show');
 
     var fullHtml = document.documentElement.outerHTML;
-
-    // 更新 SAVED_STATE
     var stateJson = JSON.stringify(state);
     var outputHtml = '<!DOCTYPE html>\n<html' + fullHtml.substring(fullHtml.indexOf('<html') + 5);
-
     // 替换已有的 SAVED_STATE
     outputHtml = outputHtml.replace(
         /var SAVED_STATE\s*=\s*\{[\s\S]*?\};\s*\n/,
         'var SAVED_STATE = ' + stateJson + ';\n'
     );
 
-    // 用当前文件名保存
+    // 还原本页面的 toast 显示状态（不影响用户当前看到的提醒）
+    if (toastShow) toastEl.classList.add('show');
+    if (slideShow) slideToastEl.classList.add('show');
+
+    return outputHtml;
+}
+
+async function saveStandaloneFile() {
+    var outputHtml = _buildStandaloneHtml();
     var currentTitle = document.getElementById('mainTitle').value || '我的海报';
+
+    // 优先：File System Access API（Chrome/Edge 等 Chromium 内核）→ 直接覆盖原文件
+    var hasFsApi = typeof window.showSaveFilePicker === 'function';
+    if (hasFsApi) {
+        try {
+            showToast('正在保存...');
+            // 第一次保存：让用户选择/确认目标文件（建议文件名沿用当前标题或文件名）
+            if (!_savedFileHandle) {
+                // 尝试用当前 URL 推断默认文件名
+                var suggested = currentTitle + '.html';
+                try {
+                    var p = decodeURIComponent(location.pathname || '');
+                    var seg = p.split('/').pop();
+                    if (seg && /\.html?$/i.test(seg)) suggested = seg;
+                } catch(_) {}
+                _savedFileHandle = await window.showSaveFilePicker({
+                    suggestedName: suggested,
+                    types: [{
+                        description: 'HTML 文件',
+                        accept: { 'text/html': ['.html', '.htm'] }
+                    }]
+                });
+            }
+            // 检查写权限
+            var perm = 'granted';
+            if (_savedFileHandle.queryPermission) {
+                perm = await _savedFileHandle.queryPermission({ mode: 'readwrite' });
+                if (perm !== 'granted' && _savedFileHandle.requestPermission) {
+                    perm = await _savedFileHandle.requestPermission({ mode: 'readwrite' });
+                }
+            }
+            if (perm !== 'granted') {
+                _savedFileHandle = null;
+                showToast('写入权限被拒绝');
+                return;
+            }
+            var writable = await _savedFileHandle.createWritable();
+            await writable.write(outputHtml);
+            await writable.close();
+            showToast('已保存：' + (_savedFileHandle.name || currentTitle + '.html'));
+            return;
+        } catch (err) {
+            if (err && err.name === 'AbortError') {
+                showToast('已取消保存');
+                return;
+            }
+            console.warn('直接保存失败，回退到下载模式：', err);
+            _savedFileHandle = null;
+            // 落到下载模式
+        }
+    }
+
+    // 回退：浏览器不支持时下载新文件（Firefox / Safari）
     var blob = new Blob([outputHtml], { type: 'text/html;charset=utf-8' });
     var link = document.createElement('a');
     link.download = currentTitle + '.html';
     link.href = URL.createObjectURL(blob);
     link.click();
     URL.revokeObjectURL(link.href);
-    showToast('已保存：' + currentTitle + '.html');
+    showToast('已保存（当前浏览器不支持直接覆盖，已下载新文件）');
+}
+
+// 提供一个"另存为"入口（强制重新选择保存位置）
+async function saveStandaloneFileAs() {
+    _savedFileHandle = null;
+    await saveStandaloneFile();
 }
 
 // DOMContentLoaded 时恢复状态（独立版本）
@@ -6756,7 +7182,7 @@ function _cleanExtractedContent(rootEl) {
         'script, style, link, meta, noscript, iframe, ' +
         'nav, header, footer, aside, ' +
         '.cell-tools, .resize-handle, .delete-btn, .crop-btn, .img-resizer, .btn-edit-trigger, ' +
-        '.float-item .resize-handle, .float-item .delete-btn'
+        '.float-item .resize-handle, .float-item .delete-btn, .float-item .rotate-handle, .float-item .crop-float-btn'
     ).forEach(function(n) { n.remove(); });
 
     // 2) 移除编辑器相关属性 & 选中态
@@ -7320,7 +7746,7 @@ function applyHtmlContent(rawText) {
     }
     updateTitle();
 
-    // 仅"自身导出"的 HTML 才还原背景/Logo 等装饰；外部 HTML 一律保留当前画布的视觉设置
+    // 仅"自身导出"的 HTML 才还原背景/Logo/贴纸 等装饰；外部 HTML 一律保留当前画布的视觉设置
     if (isSelf) {
         // -------- 海报背景色 --------
         var posterEl = doc.querySelector('.poster');
@@ -7395,6 +7821,57 @@ function applyHtmlContent(rawText) {
             updateLogoText();
             fieldsRestored.push('文字Logo');
         }
+
+        // -------- 浮动元素（贴纸 / 图标）--------
+        try {
+            var importedPoster = doc.querySelector('.poster');
+            if (importedPoster) {
+                var floatItems = importedPoster.querySelectorAll(':scope > .float-item, .poster-body > .float-item');
+                if (floatItems && floatItems.length > 0) {
+                    var posterEl = document.getElementById('poster');
+                    // 清掉当前 poster / posterBody 下已有的浮动元素，避免重复
+                    posterEl.querySelectorAll(':scope > .float-item').forEach(function(el){ el.remove(); });
+                    document.getElementById('posterBody').querySelectorAll(':scope > .float-item').forEach(function(el){ el.remove(); });
+                    var imported = 0;
+                    floatItems.forEach(function(srcEl) {
+                        // 仅取 left/top/width/height/transform 等关键样式 + img/float-content 内容
+                        var d = document.createElement('div');
+                        var srcId = srcEl.id || ('float_' + Date.now() + '_' + Math.random().toString(36).slice(2,6));
+                        d.id = srcId;
+                        // 保留 has-image / float-button 等关键类名
+                        d.className = (srcEl.className || 'float-item').replace(/\bselected\b/, '').trim();
+                        if (srcEl.getAttribute('style')) d.setAttribute('style', srcEl.getAttribute('style'));
+                        // 透传 data-rotate-angle / data-url 等 dataset
+                        if (srcEl.dataset) {
+                            for (var k in srcEl.dataset) {
+                                if (srcEl.dataset.hasOwnProperty(k)) d.dataset[k] = srcEl.dataset[k];
+                            }
+                        }
+                        // 仅迁移有意义的子节点（img / .float-content / a / .float-btn-content）；
+                        // 控件（resize-handle / delete-btn / rotate-handle / crop-float-btn）让 initFloatSystem 之后补齐
+                        Array.prototype.slice.call(srcEl.children).forEach(function(c) {
+                            if (c.classList && (
+                                c.classList.contains('resize-handle') ||
+                                c.classList.contains('delete-btn') ||
+                                c.classList.contains('rotate-handle') ||
+                                c.classList.contains('crop-float-btn') ||
+                                c.classList.contains('btn-edit-trigger')
+                            )) return;
+                            d.appendChild(c.cloneNode(true));
+                        });
+                        // 若没有任何子节点，把整个 innerHTML 当兜底
+                        if (!d.firstChild) d.innerHTML = srcEl.innerHTML || '';
+                        posterEl.appendChild(d);
+                        imported++;
+                    });
+                    if (imported > 0) {
+                        // 给新还原的贴纸补齐旋转/裁剪按钮、绑定事件
+                        try { initFloatSystem(); } catch (_) {}
+                        fieldsRestored.push('贴纸/图标 ×' + imported);
+                    }
+                }
+            }
+        } catch (_) {}
     }
 
     showToast('已智能添加到画布 · ' + fieldsRestored.join('、'));
@@ -8220,7 +8697,7 @@ function exportSlices() {
     // 准备：清除选中状态、隐藏控件
     if (activeImg) activeImg.classList.remove('selected');
     if (activeFloat) activeFloat.classList.remove('selected');
-    var tools = document.querySelectorAll('.cell-tools, .resize-handle, .delete-btn, .crop-btn, .img-resizer, .float-item .resize-handle, .float-item .delete-btn, .btn-edit-trigger, .slice-line, .slice-marker');
+    var tools = document.querySelectorAll('.cell-tools, .resize-handle, .delete-btn, .crop-btn, .img-resizer, .float-item .resize-handle, .float-item .delete-btn, .float-item .rotate-handle, .float-item .crop-float-btn, .btn-edit-trigger, .slice-line, .slice-marker');
     tools.forEach(function(el) { el.style.display = 'none'; });
 
     var wrapper = document.getElementById('posterWrapper');
