@@ -79,11 +79,12 @@
         .editor-content h2 { font-size: 28px; font-weight: 600; margin: 2px 0 2px; color: var(--theme-color, #a61b1b); }
         .editor-content h3 { font-size: 20px; font-weight: 600; margin: 18px 0 2px; color: #fff; background: var(--theme-color, #a61b1b); display: inline-block; padding: 1px 10px; border-radius: 2px; line-height: 1.4; }
         .editor-content p { margin: 0 0 8px 0; font-size: 18px; text-align: justify; }
-        .editor-content ul, .editor-content ol { margin: 6px 0 14px; padding-left: 32px; }
-        .editor-content ul { list-style-type: disc; }
-        .editor-content ol { list-style-type: decimal; }
-        .editor-content li { font-size: 18px; line-height: 1.8; margin-bottom: 4px; text-align: justify; }
-        .editor-content li::marker { color: var(--theme-color, #a61b1b); font-weight: 700; }
+        .editor-content ul, .editor-content ol { margin: 6px 0 14px; padding-left: 32px; list-style: none; }
+        .editor-content ol { counter-reset: ec-list-counter; }
+        .editor-content li { font-size: 18px; line-height: 1.6; margin-bottom: 4px; text-align: justify; position: relative; }
+        .editor-content ol > li { counter-increment: ec-list-counter; }
+        .editor-content ul > li::before { content: '•'; color: var(--theme-color, #a61b1b); font-weight: 700; position: absolute; left: -16px; top: 0; line-height: inherit; }
+        .editor-content ol > li::before { content: counter(ec-list-counter) '.'; color: var(--theme-color, #a61b1b); font-weight: 700; position: absolute; left: -28px; top: 0; width: 24px; text-align: right; line-height: inherit; }
         .editor-content .annotation { font-size: 12px; color: #888; font-style: italic; }
         
         /* 图片样式 */
@@ -138,7 +139,7 @@
         .tip-box .tip-content { color: #333; font-size: 15px; line-height: 1.4; }
         
         /* 圆角矩形文字框 */
-        .text-box { background: #f5f5f5; border: 1px solid #ddd; padding: 15px; margin: 15px 0 25px; border-radius: 12px; position: relative; }
+        .text-box { background: #f5f5f5; border: 1px solid #ddd; padding: 15px 15px 8px; margin: 15px 0 25px; border-radius: 12px; position: relative; }
         .text-box p { margin: 0; font-size: 18px; line-height: 1.6; color: #333; }
         
         /* 分隔线 */
@@ -3708,6 +3709,8 @@ function exportJPG() {
     }
     // 固化贴纸/图标位置，杜绝偏移
     _snapshotFloatPositionsForExport();
+    // 把 CSS 变量、CSS counter 替换为静态值，确保 html2canvas 渲染正确
+    var jpgPrep = _prepareJpgRendering();
     
     // 隐藏所有控件和分隔线
     var tools = document.querySelectorAll('.cell-tools, .resize-handle, .delete-btn, .crop-btn, .img-resizer, .float-item .resize-handle, .float-item .delete-btn, .float-item .rotate-handle, .float-item .crop-float-btn, .btn-edit-trigger');
@@ -3724,6 +3727,7 @@ function exportJPG() {
     // 等待一帧确保浏览器完成重排后再截图
     requestAnimationFrame(function() {
         html2canvas(document.getElementById('poster'), { scale: 2, useCORS: true, allowTaint: true }).then(function(canvas) {
+            _restoreJpgRendering(jpgPrep);
             wrapper.style.transform = savedTransform;
             wrapper.style.transition = '';
             var link = document.createElement('a');
@@ -3733,6 +3737,7 @@ function exportJPG() {
             showToast('导出成功！');
             tools.forEach(function(el) { el.style.display = ''; });
         }).catch(function(err) { 
+            _restoreJpgRendering(jpgPrep);
             wrapper.style.transform = savedTransform;
             wrapper.style.transition = '';
             showToast('导出失败');
@@ -3967,25 +3972,47 @@ function exportHTML() {
             font-size: 18px; 
             text-align: justify; 
         }
-        /* 列表样式（与编辑器保持一致） */
+        /* 列表样式（与编辑器保持一致；用 ::before 渲染 marker，html2canvas 能正确上色） */
         .editor-content ul, .editor-content ol,
         .text-box ul, .text-box ol,
         .highlight-box ul, .highlight-box ol,
         .tip-box ul, .tip-box ol {
             margin: 6px 0 14px;
             padding-left: 32px;
+            list-style: none;
         }
-        .editor-content ul, .text-box ul, .highlight-box ul, .tip-box ul { list-style-type: disc; }
-        .editor-content ol, .text-box ol, .highlight-box ol, .tip-box ol { list-style-type: decimal; }
+        .editor-content ol, .text-box ol, .highlight-box ol, .tip-box ol {
+            counter-reset: ec-list-counter;
+        }
         .editor-content li, .text-box li, .highlight-box li, .tip-box li {
             font-size: 18px;
-            line-height: 1.8;
+            line-height: 1.4;
             margin-bottom: 4px;
             text-align: justify;
+            position: relative;
         }
-        .editor-content li::marker, .text-box li::marker, .highlight-box li::marker, .tip-box li::marker {
+        .editor-content ol > li, .text-box ol > li, .highlight-box ol > li, .tip-box ol > li {
+            counter-increment: ec-list-counter;
+        }
+        .editor-content ul > li::before, .text-box ul > li::before, .highlight-box ul > li::before, .tip-box ul > li::before {
+            content: '•';
             color: ${themeColor};
             font-weight: 700;
+            position: absolute;
+            left: -16px;
+            top: 0;
+            line-height: inherit;
+        }
+        .editor-content ol > li::before, .text-box ol > li::before, .highlight-box ol > li::before, .tip-box ol > li::before {
+            content: counter(ec-list-counter) '.';
+            color: ${themeColor};
+            font-weight: 700;
+            position: absolute;
+            left: -28px;
+            top: 0;
+            width: 24px;
+            text-align: right;
+            line-height: inherit;
         }
         .editor-content .annotation { 
             font-size: 12px; 
@@ -4052,7 +4079,7 @@ function exportHTML() {
         /* Tip提示框 */
         .tip-box { 
             background: linear-gradient(135deg, #e3f2fd, #bbdefb); 
-            border: 2px dashed #2196f3; 
+            border: 1px dashed #2196f3; 
             padding:4px 20px 5px; 
             margin: 15px 0 25px; 
             border-radius: 8px; 
@@ -4071,14 +4098,14 @@ function exportHTML() {
         .tip-box .tip-content { 
             color: #333; 
             font-size: 15px; 
-            line-height: 1.4; 
+            line-height: 1.6; 
         }
         
         /* 圆角矩形文字框 */
         .text-box { 
             background: #f5f5f5; 
             border: 1px solid #ddd; 
-            padding: 15px; 
+            padding: 15px 15px 8px; 
             margin: 15px 0 25px ; 
             border-radius: 12px; 
             position: relative; 
@@ -4104,6 +4131,36 @@ function exportHTML() {
         }
         .divider-dotted { 
             background: repeating-linear-gradient(90deg, #ddd, #ddd 4px, transparent 4px, transparent 8px); 
+        }
+
+        /* 表格 */
+        .editor-table-wrapper {
+            position: relative;
+            margin: 15px 0;
+        }
+        .editor-table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+            font-size: 15px;
+            line-height: 1.55;
+            background: #ffffff;
+        }
+        .editor-table td, .editor-table th {
+            border: 1px solid #d0d7de;
+            padding: 8px 10px;
+            vertical-align: top;
+            word-wrap: break-word;
+            word-break: break-word;
+            overflow-wrap: break-word;
+            position: relative;
+            min-height: 28px;
+        }
+        .editor-table th {
+            background: #f5f7fa;
+            font-weight: 600;
+            color: #333;
+            text-align: left;
         }
         
         /* 底部Logo */
@@ -6794,6 +6851,63 @@ function _snapshotFloatPositionsForExport() {
     });
 }
 
+// JPG 导出准备：html2canvas 1.4.1 对 CSS 变量、CSS counter 支持有限，
+// 这里临时把它们替换成静态值，截图后再还原
+function _prepareJpgRendering() {
+    var snapshot = { spans: [], styleEl: null };
+    var themeColor = currentThemeColor || '#a61b1b';
+    var hb = getComputedStyle(document.documentElement).getPropertyValue('--highlight-border').trim() || themeColor;
+    var hl = getComputedStyle(document.documentElement).getPropertyValue('--highlight-bg-light').trim() || '#fff5f5';
+    var hd = getComputedStyle(document.documentElement).getPropertyValue('--highlight-bg-dark').trim() || '#ffe0e0';
+
+    // 注入静态颜色覆盖：避免 html2canvas 不解析 CSS 变量导致的颜色丢失
+    var styleEl = document.createElement('style');
+    styleEl.id = '_jpg_static_overrides';
+    styleEl.textContent =
+        '.editor-content h1 { color: ' + themeColor + ' !important; }' +
+        '.editor-content h2 { color: ' + themeColor + ' !important; }' +
+        '.editor-content h3 { background: ' + themeColor + ' !important; color: #fff !important; }' +
+        '.editor-content ul > li::before { color: ' + themeColor + ' !important; }' +
+        '.editor-content ol > li::before { content: "" !important; }' +
+        '.highlight-box {' +
+            'background: linear-gradient(135deg, ' + hl + ', ' + hd + ') !important;' +
+            'border-left: 4px solid ' + hb + ' !important;' +
+        '}';
+    document.head.appendChild(styleEl);
+    snapshot.styleEl = styleEl;
+
+    // 把所有 ol > li 的 CSS counter 数字替换为手工 span（html2canvas 不识别 counter）
+    document.querySelectorAll('.editor-content ol').forEach(function(ol) {
+        var n = 1;
+        Array.prototype.slice.call(ol.children).forEach(function(li) {
+            if (!li || li.tagName !== 'LI') return;
+            var span = document.createElement('span');
+            span.className = '_jpg_ol_marker';
+            span.textContent = n + '.';
+            span.style.cssText =
+                'color:' + themeColor + ';' +
+                'font-weight:700;' +
+                'position:absolute;' +
+                'left:-28px;' +
+                'top:0;' +
+                'width:24px;' +
+                'text-align:right;' +
+                'line-height:inherit;';
+            li.insertBefore(span, li.firstChild);
+            snapshot.spans.push(span);
+            n++;
+        });
+    });
+
+    return snapshot;
+}
+
+function _restoreJpgRendering(snapshot) {
+    if (!snapshot) return;
+    snapshot.spans.forEach(function(s) { if (s && s.parentNode) s.remove(); });
+    if (snapshot.styleEl && snapshot.styleEl.parentNode) snapshot.styleEl.remove();
+}
+
 function restoreEditorState(state) {
     if (!state) return;
     // 标题
@@ -8697,6 +8811,8 @@ function exportSlices() {
     // 准备：清除选中状态、隐藏控件
     if (activeImg) activeImg.classList.remove('selected');
     if (activeFloat) activeFloat.classList.remove('selected');
+    _snapshotFloatPositionsForExport();
+    var jpgPrep = _prepareJpgRendering();
     var tools = document.querySelectorAll('.cell-tools, .resize-handle, .delete-btn, .crop-btn, .img-resizer, .float-item .resize-handle, .float-item .delete-btn, .float-item .rotate-handle, .float-item .crop-float-btn, .btn-edit-trigger, .slice-line, .slice-marker');
     tools.forEach(function(el) { el.style.display = 'none'; });
 
@@ -8720,6 +8836,7 @@ function exportSlices() {
 
     requestAnimationFrame(function() {
         html2canvas(poster, { scale: 2, useCORS: true, allowTaint: true }).then(function(fullCanvas) {
+            _restoreJpgRendering(jpgPrep);
             wrapper.style.transform = savedTransform;
             wrapper.style.transition = '';
             tools.forEach(function(el) { el.style.display = ''; });
@@ -8754,6 +8871,7 @@ function exportSlices() {
                 showToast('已导出 ' + sliceCount + ' 张切片');
             });
         }).catch(function(err) {
+            _restoreJpgRendering(jpgPrep);
             wrapper.style.transform = savedTransform;
             wrapper.style.transition = '';
             tools.forEach(function(el) { el.style.display = ''; });
