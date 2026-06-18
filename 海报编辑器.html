@@ -3794,6 +3794,15 @@ function exportHTML() {
     var highlightBorder = getComputedStyle(document.documentElement).getPropertyValue('--highlight-border').trim() || themeColor;
     var highlightBgLight = getComputedStyle(document.documentElement).getPropertyValue('--highlight-bg-light').trim() || '#fff5f5';
     var highlightBgDark = getComputedStyle(document.documentElement).getPropertyValue('--highlight-bg-dark').trim() || '#ffe0e0';
+
+    // 收集编辑器里通过工具栏（行距 / 段距 / 字号）注入的动态 <style>，
+    // 这些 style 在 document.head，不在 #poster 内部，必须显式带到导出 HTML，
+    // 否则导出后 行距 / 段距 / 字号 会回退到默认值，导致与画布预览不一致（贴纸看似偏移）
+    var dynamicCss = '';
+    ['dynamic-line-spacing', 'dynamic-para-spacing', 'dynamic-font-size'].forEach(function(id) {
+        var s = document.getElementById(id);
+        if (s && s.textContent) dynamicCss += '\n' + s.textContent;
+    });
     
     var title = document.getElementById('titleText').textContent;
     var html = `<!DOCTYPE html>
@@ -3986,7 +3995,7 @@ function exportHTML() {
         }
         .editor-content li, .text-box li, .highlight-box li, .tip-box li {
             font-size: 18px;
-            line-height: 1.4;
+            line-height: 1.6;
             margin-bottom: 4px;
             text-align: justify;
             position: relative;
@@ -4098,7 +4107,7 @@ function exportHTML() {
         .tip-box .tip-content { 
             color: #333; 
             font-size: 15px; 
-            line-height: 1.6; 
+            line-height: 1.4; 
         }
         
         /* 圆角矩形文字框 */
@@ -4228,6 +4237,8 @@ function exportHTML() {
                 box-shadow: none; 
             }
         }
+        /* 动态注入：行距 / 段距 / 字号（来自工具栏控件设置） */
+        ${dynamicCss}
     </style>
 </head>
 <body>
@@ -6821,32 +6832,60 @@ function collectFloatItems() {
 
 // 导出前把每个 float-item 的"当前可见"位置/尺寸固化到 inline style，
 // 兜底处理任何环境/CSS/缩放差异导致的导出位置偏移
+//
+// 关键策略：
+//   1) 先把所有"还残留在 posterBody 内的 float-item"（历史遗留）迁移到 #poster，
+//      并在迁移过程中根据"视觉位置"重新计算坐标，避免坐标系切换造成 100+px 漂移
+//   2) 用 getBoundingClientRect 做最终位置/尺寸快照（参考系明确，旋转/缩放都已处理）
 function _snapshotFloatPositionsForExport() {
     var poster = document.getElementById('poster');
     if (!poster) return;
     var z = (typeof zoomLevel === 'number' && zoomLevel > 0) ? zoomLevel : 1;
+
+    // 1) 迁移 posterBody 内残留的 float-item，并改写坐标到 #poster 参考系
+    var posterBody = document.getElementById('posterBody');
+    if (posterBody) {
+        posterBody.querySelectorAll(':scope > .float-item').forEach(function(el) {
+            var savedTf = el.style.transform;
+            if (savedTf) el.style.transform = 'none';
+            var posterRectBefore = poster.getBoundingClientRect();
+            var elRectBefore = el.getBoundingClientRect();
+            // 迁移到 poster
+            poster.appendChild(el);
+            // 用迁移前的"视觉位置"重新计算 poster 参考系下的 CSS 坐标
+            el.style.left = Math.round((elRectBefore.left - posterRectBefore.left) / z) + 'px';
+            el.style.top  = Math.round((elRectBefore.top  - posterRectBefore.top)  / z) + 'px';
+            if (savedTf) el.style.transform = savedTf;
+        });
+    }
+
+    // 2) 强制 reflow，再快照所有 #poster > .float-item
+    void poster.offsetHeight;
     var posterRect = poster.getBoundingClientRect();
+
     poster.querySelectorAll(':scope > .float-item').forEach(function(el) {
         // 暂存并清掉 transform，避免旋转影响 boundingRect 的"未旋转 top-left"判断
         var savedTransform = el.style.transform;
         if (savedTransform) el.style.transform = 'none';
-        // 取消选中态以免外框影响测量
+        // 取消选中态以免外框 outline 影响测量
         var hadSel = el.classList.contains('selected');
         if (hadSel) el.classList.remove('selected');
+        void el.offsetHeight;
+
         var rect = el.getBoundingClientRect();
         var cssX = (rect.left - posterRect.left) / z;
-        var cssY = (rect.top - posterRect.top) / z;
-        var cssW = rect.width / z;
+        var cssY = (rect.top  - posterRect.top)  / z;
+        var cssW = rect.width  / z;
         var cssH = rect.height / z;
-        // 还原 transform 与选中态
+
+        // 还原
         if (savedTransform) el.style.transform = savedTransform;
         if (hadSel) el.classList.add('selected');
-        // 写回 inline style（保留 transform、width 等，仅强制覆盖 left/top）
+
+        // 强制写回 left/top；保留 transform、width 等
         el.style.left = Math.round(cssX) + 'px';
         el.style.top  = Math.round(cssY) + 'px';
-        // 如果之前没有显式 width，用测得的 width 固化（避免新环境下的不一致）
         if (!el.style.width && cssW > 0) el.style.width = Math.round(cssW) + 'px';
-        // 高度通常 auto（图片自适应），不强制设置，除非已经存在
         if (el.style.height && cssH > 0) el.style.height = Math.round(cssH) + 'px';
     });
 }
