@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>活动签到</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .card {
+      background: white;
+      border-radius: 16px;
+      padding: 40px 32px;
+      width: 100%;
+      max-width: 400px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      text-align: center;
+    }
+    h1 { font-size: 24px; color: #1a1a1a; margin-bottom: 8px; }
+    .subtitle { color: #888; font-size: 14px; margin-bottom: 32px; }
+    input {
+      width: 100%;
+      padding: 14px 16px;
+      border: 2px solid #e0e0e0;
+      border-radius: 10px;
+      font-size: 18px;
+      text-align: center;
+      letter-spacing: 4px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    input:focus { border-color: #667eea; }
+    button {
+      width: 100%;
+      margin-top: 16px;
+      padding: 14px;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    button:disabled { opacity: 0.6; cursor: not-allowed; }
+    .result {
+      margin-top: 24px;
+      padding: 16px;
+      border-radius: 10px;
+      font-size: 16px;
+      font-weight: 500;
+      display: none;
+    }
+    .result.success { background: #e8f5e9; color: #2e7d32; }
+    .result.error { background: #fce4ec; color: #c62828; }
+  </style>
+</head>
+<body>
+<div class="card">
+  <h1>📋 活动签到</h1>
+  <p class="subtitle">请输入您的工号完成签到</p>
+  <input type="text" id="empId" placeholder="请输入工号" maxlength="20" />
+  <button id="btn" onclick="checkin()">确认签到</button>
+  <div class="result" id="result"></div>
+</div>
+<script>
+  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwsBMpdTB2tZtqrm5wGaxl8W_ZdD3feKYVJgkhodPWhoq6z1AtBLjesRjntIcPhgTXE/exec"; // ← 替换
+  async function checkin() {
+    const empId = document.getElementById("empId").value.trim();
+    const btn = document.getElementById("btn");
+    const result = document.getElementById("result");
+    if (!empId) { showResult("请先输入工号", false); return; }
+    btn.disabled = true;
+    btn.textContent = "签到中...";
+    result.style.display = "none";
+    try {
+      const res = await fetch(SCRIPT_URL, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain" },
+        body: JSON.stringify({ employeeId: empId })
+      });
+      const data = await res.json();
+      showResult(data.message, data.success);
+      if (data.success) document.getElementById("empId").value = "";
+    } catch (e) {
+      showResult("网络错误，请重试", false);
+    }
+    btn.disabled = false;
+    btn.textContent = "确认签到";
+  }
+  function showResult(msg, success) {
+    const el = document.getElementById("result");
+    el.textContent = msg;
+    el.className = "result " + (success ? "success" : "error");
+    el.style.display = "block";
+  }
+  document.getElementById("empId").addEventListener("keydown", e => {
+    if (e.key === "Enter") checkin();
+  });
+</script>
+</body>
+</html>
