@@ -280,6 +280,6 @@ window.BOOT_CONFIG = {
       }
     ],
     "imageUrl": "https://img.remit.ee/i/hT0CobQyNM2X",
-    "textMargin": 10
+    "textMargin": 5
   }
 };
