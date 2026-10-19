@@ -195,7 +195,9 @@
     /* 新增：最底层的纯色背景 */
     .grid .grid-bg {
       position: absolute;
-      inset: 0;
+      inset: 10%;      /* 与 .photo 的 inset 保持一致 */
+      width: 80%;      /* 与 .photo 的宽度保持一致 */
+      height: 80%;     /* 与 .photo 的高度保持一致 */
       background: #ffffff;
       z-index: 0;
     }
