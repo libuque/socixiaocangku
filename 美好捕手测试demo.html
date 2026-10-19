@@ -149,11 +149,15 @@
       background: transparent;
     }
     .dock { flex-direction: column; gap: 8px; }
+    
+    /* 修正底部格子的布局和居中 */
     .grids-inner {
       width: 100%;
       display: grid;
       grid-template-columns: repeat(4, 1fr);
-      gap: 8px;
+      gap: 6px; /* 缩小间距防溢出 */
+      padding: 0 4px;
+      justify-content: center;
     }
     .ticket-btn {
       width: 100%;
@@ -169,35 +173,51 @@
       background: rgba(23,50,77,.28);
       color: #fff;
     }
+    
+    /* 修正格子内的图片显示，防黑底、防溢出 */
     .grid {
       aspect-ratio: 1;
       border-radius: 0;
       border: 0;
-      display: grid;
-      place-items: center;
       position: relative;
       background: transparent;
-      overflow: visible;
+      overflow: hidden;
       font-size: 11px;
       color: #6b5a48;
+      min-width: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      appearance: none;
+      padding: 0;
     }
     .grid.lit { background: transparent; box-shadow: none; }
-    .grid img {
-      width: 100%;
-      height: 100%;
-      object-fit: contain;
+    
+    /* 内部打卡照片：留出 inset 避免超出彩色外框 */
+    .grid .photo {
+      position: absolute; 
+      inset: 10%; 
+      width: 80%; height: 80%;
+      object-fit: cover;
       background: transparent;
+      z-index: 1;
     }
+    
+    /* 外框图：保证居中、不变形、叠加在照片上层 */
     .grid .frame {
       position: absolute; inset: 0;
       width: 100%; height: 100%;
-      object-fit: fill;
+      object-fit: contain; 
       pointer-events: none;
+      z-index: 2;
     }
+    
     .grid.waiting { opacity: .72; }
+    .grid span, .grid .label { position: relative; z-index: 3; }
     .grid.me-slot .label { font-size: 10px; line-height: 1.2; text-align: center; }
     .grid.lit { animation: bounce .5s ease; }
     @keyframes bounce { 0%{transform:scale(.78)} 60%{transform:scale(1.08)} 100%{transform:scale(1)} }
+    
     #sheet.sheet {
       position: fixed; inset: 0;
       background: rgba(17,24,32,.46);
@@ -295,7 +315,7 @@
   <canvas id="ticketCanvas" class="hidden"></canvas>
   <script src="config.js"></script>
   <script>
-    const EMBEDDED_BOOT = {"ok": true, "activity": {"title": "网易美好捕手", "titleImageUrl": "https://i.imgs.ovh/2026/10/16/0175d1aaa94969aca947ba3ac201f9fd.jpg", "backgroundUrl": "https://i.imgs.ovh/2026/10/16/7ff2d6796e7c4e8cbad168503eb964b2.png", "introVideoUrl": "https://pictureurl.com/api/storage/file?key=u%2Fanon%2F8545ce4f-f0f5-4a7d-8df5-b28212cfb5a8-_______IP_______.mp4", "progressFrameUrl": "https://i.imgs.ovh/2026/10/16/09f7e31dcabb10c4e33f2ab3962e5dd4.png", "playGuide": "【玩法说明预留，后续可在后台修改】\n1. 选择当前所在园区。\n2. 滑动查看可打卡点位，根据谜面前往线下点位。\n3. 扫描点位二维码上传点位照片即可完成打卡。\n4. 完成任意 3 个不同点位后，上传与 Soci 的合照。\n5. 即可生成网易美好四宫格，可前往园区服务台领取惊喜。", "prizeHint": "可前往当前园区服务台领取惊喜奖品，也可保存票根图片分享至易网评论区参与惊喜抽奖。", "sociMeaning": "与 Soci 合照，展现“你是网易美好的重要组成”。", "layout": {"canvas": {"w": 390, "h": 844}, "items": {"title": {"x": 0, "y": 2, "w": 100, "h": 18.6, "hidden": true}, "campus": {"x": 26.6, "y": 20.5, "w": 45.6, "h": 4}, "progress": {"x": 18, "y": 87.7, "w": 64, "h": 3}, "track": {"x": 0, "y": 28.1, "w": 100, "h": 40.4}, "grids": {"x": 10, "y": 71.7, "w": 80, "h": 16}, "ticketBtn": {"x": 27.7, "y": 90.5, "w": 44, "h": 5.5}}}, "rules": {"requiredSpotCount": 3}}, "campuses": [], "spots": [], "ticketTemplate": {}};
+    const EMBEDDED_BOOT = {"ok": true, "activity": {"title": "网易美好捕手", "titleImageUrl": "https://i.imgs.ovh/2026/10/16/0175d1aaa94969aca947ba3ac201f9fd.jpg", "backgroundUrl": "https://i.imgs.ovh/2026/10/16/7ff2d6796e7c4e8cbad168503eb964b2.png", "introVideoUrl": "https://pictureurl.com/api/storage/file?key=u%2Fanon%2F8545ce4f-f0f5-4a7d-8df5-b28212cfb5a8-_______IP_______.mp4", "progressFrameUrl": "https://i.imgs.ovh/2026/10/16/09f7e31dcabb10c4e33f2ab3962e5dd4.png", "playGuide": "【玩法说明预留，后续可在后台修改】\n1. 选择当前所在园区。\n2. 滑动查看可打卡点位，根据谜面前往线下点位。\n3. 扫描点位二维码上传点位照片即可完成打卡。\n4. 完成任意 3 个不同点位后，上传与 Soci 的合照。\n5. 即可生成网易美好四宫格，可前往园区服务台领取惊喜。", "prizeHint": "可前往当前园区服务台领取惊喜奖品，也可保存票根图片分享至易网评论区参与惊喜抽奖。", "sociMeaning": "与 Soci 合照，展现“你是网易美好的重要组成”。", "layout": {"canvas": {"w": 390, "h": 844}, "items": {"title": {"x": 0, "y": 2, "w": 100, "h": 18.6, "hidden": true}, "campus": {"x": 26.6, "y": 20.5, "w": 45.6, "h": 4}, "progress": {"x": 18, "y": 87.7, "w": 64, "h": 3}, "track": {"x": 0, "y": 28.1, "w": 100, "h": 40.4}, "grids": {"x": 10, "y": 71.7, "w": 80, "h": 16}, "ticketBtn": {"x": 27.7, "y": 90.5, "w": 44, "h": 5.5}}}, "rules": {"requiredSpotCount": 3}}, "campuses": [], "spots": [], "typeRules": [], "ticketTemplate": {}};
 
     const state = {
       boot: null,
@@ -321,9 +341,7 @@
         if (state.me && state.me.employeeId) {
           localStorage.setItem("nh_me_" + state.me.employeeId, JSON.stringify(state.me));
         }
-      } catch (e) {
-        // 容量满时忽略，不打断流程
-      }
+      } catch (e) {}
     }
 
     function recalcProgress() {
@@ -377,21 +395,37 @@
       return ids.includes(campusId);
     }
 
+    // 修改3：处理进度格子样式，透明背景
     function renderGrids() {
       const latest = ((state.me && state.me.progress && state.me.progress.latest) || (state.me && state.me.completedSpots) || []).slice(0, 3);
       const soci = state.me && state.me.sociPhotoUrl;
-      const frame = state.boot.activity.progressFrameUrl || "/mws-cms-nicehunt/api/page/assets/stamp-frame.svg";
+      const frame = state.boot.activity.progressFrameUrl || "";
+      
       const cells = [0,1,2].map((i) => {
         const frameImg = `<img class="frame" src="${esc(frame)}" alt="">`;
         const rec = latest[i];
         return rec
-          ? `<button class="grid lit" data-id="${esc(rec.id)}">${frameImg}<img src="${esc(rec.photoUrl)}" alt="${esc(rec.spot.name)}"></button>`
-          : `<div class="grid waiting">${frameImg}<span>${i + 1}</span></div>`;
+          ? `<button class="grid lit" data-id="${esc(rec.id)}">
+               <img class="photo" src="${esc(rec.photoUrl)}" alt="">
+               ${frameImg}
+             </button>`
+          : `<div class="grid waiting">
+               ${frameImg}
+               <span>${i + 1}</span>
+             </div>`;
       }).join("");
+      
       const meFrame = `<img class="frame" src="${esc(frame)}" alt="">`;
       const meCell = soci
-        ? `<button class="grid lit me-slot" data-kind="soci">${meFrame}<img src="${esc(soci)}" alt="我的照片"></button>`
-        : `<button class="grid waiting me-slot" data-kind="soci">${meFrame}<span class="label">我的照片<br>/ SOCI</span></button>`;
+        ? `<button class="grid lit me-slot" data-kind="soci">
+             <img class="photo" src="${esc(soci)}" alt="我的照片">
+             ${meFrame}
+           </button>`
+        : `<button class="grid waiting me-slot" data-kind="soci">
+             ${meFrame}
+             <span class="label">我的照片<br>/ SOCI</span>
+           </button>`;
+           
       $("grids").innerHTML = cells + meCell;
       $("grids").querySelectorAll("button.grid").forEach((btn) => {
         btn.onclick = () => {
@@ -439,11 +473,14 @@
       $("progressText").textContent = p
         ? `已完成 ${p.completed}/${p.required} 项${p.unlocked ? " · 可生成票根" : ""}`
         : "";
+      
+      // 修改2：不过滤已打卡的点位，确保全部展示
       const spots = (state.me.pendingSpots || []).filter((s) => {
         if (!state.me.campus) return true;
         const ids = s.campusIds && s.campusIds.length ? s.campusIds : (s.campusId ? [s.campusId] : []);
         return ids.includes(state.me.campus.id);
       });
+      
       $("track").innerHTML = spots.map((s) => `
         <article class="card ${s.cardImageUrl ? "has-image" : ""}" data-id="${esc(s.id)}">
           <img src="${esc(s.cardImageUrl)}" alt="${esc(s.name)}">
@@ -484,10 +521,9 @@
         };
       }
       if (!state.me.completedSpots) state.me.completedSpots = [];
-      if (!state.me.pendingSpots || !state.me.pendingSpots.length) {
-        const doneIds = state.me.completedSpots.map((r) => r.spotId);
-        state.me.pendingSpots = (state.boot.spots || []).filter((s) => !doneIds.includes(s.id));
-      }
+      // 修改2：不再通过 doneIds 剔除，把所有点位都放进去
+      state.me.pendingSpots = (state.boot.spots || []);
+      
       recalcProgress();
       saveMe();
     }
@@ -589,10 +625,14 @@
           note: note || "",
           createdAt: Date.now(),
         };
+        // 覆盖之前同一点位的打卡记录
         const list = (state.me.completedSpots || []).filter((r) => r.spotId !== spot.id);
         list.push(rec);
         state.me.completedSpots = list;
-        state.me.pendingSpots = (state.me.pendingSpots || []).filter((s) => s.id !== spot.id);
+        
+        // 修改2：去掉剔除 pendingSpots 的逻辑，可以重复打卡
+        // state.me.pendingSpots = (state.me.pendingSpots || []).filter((s) => s.id !== spot.id);
+        
         recalcProgress();
         saveMe();
         closeSheet();
@@ -645,12 +685,36 @@
       }
     }
 
+    // 修改4：增加 Soci 照片强制拦截
     function openTicketFlow() {
       if (!state.me || !state.me.progress || !state.me.progress.unlocked) {
         toast("完成任意 3 项打卡后可生成票根");
         return;
       }
+      if (!state.me.sociPhotoUrl) {
+        toast("请先上传与 Soci 的合照");
+        showSociSlot();
+        return;
+      }
       composeFromGrids();
+    }
+
+    function matchTypeRule(latest, typeRules) {
+      const rules = Array.isArray(typeRules) ? typeRules : [];
+      const keywords = new Set();
+      (latest || []).forEach((r) => {
+        (r.spot && r.spot.keywords || []).forEach((k) => keywords.add(k));
+      });
+      let best = null, bestScore = 0;
+      rules.forEach((rule) => {
+        if (rule.isDefault) return;
+        const hits = (rule.keywords || []).filter((k) => keywords.has(k)).length;
+        if (hits > bestScore) { bestScore = hits; best = rule; }
+      });
+      if (best) return { name: best.name, description: best.description };
+      const fallback = rules.find((r) => r.isDefault);
+      if (fallback) return { name: fallback.name, description: fallback.description };
+      return { name: "美好捕手", description: "活动趣味结果，非正式测评" };
     }
 
     async function composeFromGrids() {
@@ -664,7 +728,7 @@
         showTypeAndTicket({
           template: template,
           ticket: { photos },
-          typeResult: { name: "美好捕手", description: "活动趣味结果，非正式测评" },
+          typeResult: matchTypeRule(latest, state.boot.typeRules),
           activity: state.boot.activity,
         });
       } catch (err) {
@@ -690,7 +754,7 @@
       return `<div class="ticket-stage">${slotHtml}${frameHtml}</div>`;
     }
 
-    // 内嵌票根合成：替代原外部 ticket.js 的 composeTicketCanvas
+    // 修改1：确保模板框和照片正常合并
     function composeTicketCanvas({ activity, template, photos, canvas }) {
       return new Promise(async (resolve, reject) => {
         try {
@@ -704,6 +768,7 @@
 
           const loadImage = (src) => new Promise((res, rej) => {
             const img = new Image();
+            // 如果是 HTTP/HTTPS 的外链，尝试跨域加载
             if (!/^data:/.test(src)) img.crossOrigin = "anonymous";
             img.onload = () => res(img);
             img.onerror = () => rej(new Error("图片加载失败"));
@@ -735,15 +800,19 @@
             try {
               const img = await loadImage(photos[i]);
               drawCover(img, s.x, s.y, s.w, s.h, s.radius || 12);
-            } catch (e) { /* 单张失败跳过 */ }
+            } catch (e) { console.warn("照片加载失败", e); }
           }
 
           const frameUrl = template.frameImageUrl || template.imageUrl;
           if (frameUrl && !/placehold\.co/i.test(frameUrl)) {
             try {
               const frame = await loadImage(frameUrl);
+              // 将外框图覆盖在最上层
               ctx.drawImage(frame, 0, 0, W, H);
-            } catch (e) { /* 外框失败则不叠加 */ }
+            } catch (e) {
+              console.warn("模板外框图加载失败或跨域受限", e);
+              throw new Error("模板外框加载失败，请检查外框图是否支持跨域（CORS）");
+            }
           }
 
           resolve(canvas.toDataURL("image/png"));
