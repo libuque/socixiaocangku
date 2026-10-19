@@ -248,37 +248,38 @@ window.BOOT_CONFIG = {
     "slots": [
       {
         "key": "photo1",
-        "x": 70,
-        "y": 473,
-        "w": 533,
-        "h": 520,
+        "x": 87,
+        "y": 507,
+        "w": 503,
+        "h": 483,
         "radius": 12
       },
       {
         "key": "photo2",
-        "x": 610,
-        "y": 483,
-        "w": 550,
-        "h": 523,
+        "x": 623,
+        "y": 507,
+        "w": 503,
+        "h": 490,
         "radius": 12
       },
       {
         "key": "photo3",
-        "x": 614,
-        "y": 1024,
-        "w": 530,
-        "h": 550,
+        "x": 87,
+        "y": 1037,
+        "w": 497,
+        "h": 504,
         "radius": 12
       },
       {
         "key": "photo4",
-        "x": 67,
-        "y": 1010,
-        "w": 540,
-        "h": 583,
+        "x": 623,
+        "y": 1038,
+        "w": 503,
+        "h": 503,
         "radius": 12
       }
     ],
-    "imageUrl": "https://img.remit.ee/i/hT0CobQyNM2X"
+    "imageUrl": "https://img.remit.ee/i/hT0CobQyNM2X",
+    "textMargin": 10
   }
 };
