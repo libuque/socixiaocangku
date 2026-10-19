@@ -298,7 +298,6 @@
       object-fit: fill; pointer-events: none;
     }
     
-    /* 纯白斜体带阴影的文字，无背景框 */
     .ticket-note {
       position: absolute;
       z-index: 10;
@@ -316,7 +315,6 @@
     .hint { font-size: 12px; color: #6b7280; line-height: 1.6; white-space: pre-wrap; }
     .btn-row { display: flex; gap: 8px; justify-content: center; margin-top: 12px; flex-wrap: wrap; align-items: center; }
     
-    /* 修复复选框和文字的垂直对齐 */
     .btn-row label {
       display: inline-flex;
       align-items: center;
@@ -871,20 +869,18 @@
         
         if (showNotes && note) {
           const displayText = `“${note}”`;
-          // 使用 px 边距，因为在缩放后的预览容器里，如果直接用百分比容易错位，改用绝对 px
-          // 为了适配预览的缩放，因为 ticket-stage 最大 320px，而我们配置的是 1200px 画布的像素，这里要按比例换算
           const stageWidth = 320;
           const scale = stageWidth / width;
           const pxMargin = marginVal * scale;
           
           let stylePos = `style="`;
-          if (i === 0) { // 图1 右下
+          if (i === 0) { 
             stylePos += `bottom: ${pxMargin}px; right: ${pxMargin}px;`;
-          } else if (i === 1) { // 图2 左下
+          } else if (i === 1) { 
             stylePos += `bottom: ${pxMargin}px; left: ${pxMargin}px;`;
-          } else if (i === 2) { // 图3 右上
+          } else if (i === 2) { 
             stylePos += `top: ${pxMargin}px; right: ${pxMargin}px;`;
-          } else { // 图4 左上
+          } else { 
             stylePos += `top: ${pxMargin}px; left: ${pxMargin}px;`;
           }
           stylePos += `"`;
@@ -963,17 +959,16 @@
             
             let textX, textY;
             
-            // margin 为配置的像素值
-            if (i === 0) { // 右下
+            if (i === 0) { 
               textX = s.x + s.w - textWidth - margin;
               textY = s.y + s.h - margin;
-            } else if (i === 1) { // 左下
+            } else if (i === 1) { 
               textX = s.x + margin;
               textY = s.y + s.h - margin;
-            } else if (i === 2) { // 右上
+            } else if (i === 2) { 
               textX = s.x + s.w - textWidth - margin;
               textY = s.y + margin + textHeight;
-            } else { // 左上
+            } else { 
               textX = s.x + margin;
               textY = s.y + margin + textHeight;
             }
@@ -1114,6 +1109,17 @@
         toast(err.message);
         return;
       }
+
+      // 修复：扫码带参数时，跳过开场视频
+      const params = new URLSearchParams(location.search);
+      const spotId = params.get("spot");
+      if (spotId) {
+        $("intro").classList.add("hidden");
+        $("app").classList.remove("hidden");
+        enterApp();
+        return;
+      }
+
       $("intro").classList.remove("hidden");
       $("app").classList.add("hidden");
       const video = $("introVideo");
@@ -1136,8 +1142,10 @@
       if (state.entered) return;
       state.entered = true;
       const video = $("introVideo");
-      video.onended = null;
-      video.pause();
+      if (video) {
+        video.onended = null;
+        video.pause();
+      }
       $("intro").classList.add("hidden");
       $("app").classList.remove("hidden");
       try {
