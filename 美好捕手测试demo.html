@@ -500,7 +500,7 @@
       const campus = state.me && state.me.campus;
       $("campusName").textContent = campus ? campus.name : "未选择";
       
-      // 修改3：去除“已完成xxx”的进度显示文字
+      // 去除进度文字显示
       $("progressText").textContent = "";
       
       const spots = (state.me.pendingSpots || []).filter((s) => {
@@ -608,7 +608,6 @@
       return all.find((s) => s.id === id);
     }
 
-    // 修改2：重做详情页UI
     function showSpot(id) {
       const spot = spotById(id) || state.pendingSpot;
       if (!spot) return;
@@ -678,7 +677,6 @@
           createdAt: Date.now(),
         };
         
-        // 覆盖之前同一点位的打卡记录
         const list = (state.me.completedSpots || []).filter((r) => r.spotId !== spot.id);
         list.push(rec);
         state.me.completedSpots = list;
@@ -744,7 +742,6 @@
       const file = $("sociFile").files[0];
       if (!file && !state.me.sociPhotoUrl) return toast("请先选择照片");
       
-      // 如果没有选新图，直接用现有的
       if (!file && state.me.sociPhotoUrl) {
         closeSheet();
         return;
@@ -834,7 +831,6 @@
       return `<div class="ticket-stage">${slotHtml}${frameHtml}</div>`;
     }
 
-    // 修改1：优化图片加载策略，解决 CORS 导致外框加载失败报错
     function composeTicketCanvas({ activity, template, photos, canvas }) {
       return new Promise(async (resolve, reject) => {
         try {
@@ -846,6 +842,7 @@
           ctx.fillStyle = "#f3e6cf";
           ctx.fillRect(0, 0, W, H);
 
+          // 双重加载兜底：如果跨域失败，自动尝试用公共图片代理服务重试
           const loadImage = (src) => new Promise((res, rej) => {
             const img = new Image();
             if (!/^data:/.test(src)) {
@@ -853,11 +850,16 @@
             }
             img.onload = () => res(img);
             img.onerror = () => {
-              // 如果带 crossOrigin 加载失败，尝试不带跨域头直接加载（仅作渲染兜底）
-              const img2 = new Image();
-              img2.onload = () => res(img2);
-              img2.onerror = () => rej(new Error("图片加载失败"));
-              img2.src = src;
+              if (!/^data:/.test(src) && !src.includes('wsrv.nl')) {
+                const proxySrc = `https://wsrv.nl/?url=${encodeURIComponent(src)}`;
+                const img2 = new Image();
+                img2.crossOrigin = "anonymous";
+                img2.onload = () => res(img2);
+                img2.onerror = () => rej(new Error("图片加载失败"));
+                img2.src = proxySrc;
+              } else {
+                rej(new Error("图片加载失败"));
+              }
             };
             img.src = src;
           });
@@ -901,11 +903,27 @@
           }
 
           try {
-            resolve(canvas.toDataURL("image/png"));
+            const dataUrl = canvas.toDataURL("image/png");
+            resolve({ url: dataUrl, degraded: false });
           } catch (e) {
-            // 捕获画布污染异常
-            if (e.name === 'SecurityError') {
-              reject(new Error("由于图片跨域限制，无法直接导出。请直接截图保存预览。"));
+            // 如果发生跨域污染报错，降级处理：不画外框图，仅出照片图
+            if (e.name === 'SecurityError' || e.message.includes('tainted')) {
+              canvas.width = W;
+              canvas.height = H;
+              const ctx2 = canvas.getContext("2d");
+              ctx2.fillStyle = "#f3e6cf";
+              ctx2.fillRect(0, 0, W, H);
+
+              for (let i = 0; i < slots.length; i++) {
+                const s = slots[i];
+                if (!photos[i]) continue;
+                try {
+                  const img = await loadImage(photos[i]);
+                  drawCover(img, s.x, s.y, s.w, s.h, s.radius || 12);
+                } catch (err) {}
+              }
+              const dataUrl = canvas.toDataURL("image/png");
+              resolve({ url: dataUrl, degraded: true });
             } else {
               reject(new Error("导出图片失败，请截图保存"));
             }
@@ -938,16 +956,21 @@
         $("saveTicket").disabled = true;
         $("saveTicket").textContent = "导出中…";
         try {
-          const url = await composeTicketCanvas({
+          const res = await composeTicketCanvas({
             activity: data.activity,
             template,
             photos: data.ticket.photos,
             canvas: $("ticketCanvas"),
           });
+          
           const a = document.createElement("a");
-          a.href = url;
+          a.href = res.url;
           a.download = "nicehunt-ticket.png";
           a.click();
+          
+          if (res.degraded) {
+            toast("由于外框图跨域限制，已为您生成不带外框的图片。如需带外框，请截图保存预览。");
+          }
         } catch (err) {
           toast(err.message || "导出失败，请截图保存预览");
         } finally {
