@@ -298,11 +298,12 @@
       object-fit: fill; pointer-events: none;
     }
     
+    /* 预览字体调整，配合画布字体 */
     .ticket-note {
       position: absolute;
       z-index: 10;
       font-family: "Source Han Sans SC", "Noto Sans SC", "PingFang SC", sans-serif;
-      font-size: 11px;
+      font-size: 10px; /* 画布 40px 对应 1200 宽，这里 320 宽所以是 10.6px */
       color: #ffffff;
       font-style: italic;
       text-shadow: 1px 1px 3px rgba(0,0,0,0.8);
@@ -860,7 +861,7 @@
       const slots = Array.isArray(template.slots) ? template.slots : [];
       const frameUrl = template.frameImageUrl || template.imageUrl || "";
       
-      const marginVal = template.textMargin !== undefined ? Number(template.textMargin) : 10;
+      const M = 12; // 预览容器里的边距 (px)
 
       const slotHtml = slots.map((slot, i) => {
         const photo = photos[i] || "";
@@ -869,19 +870,15 @@
         
         if (showNotes && note) {
           const displayText = `“${note}”`;
-          const stageWidth = 320;
-          const scale = stageWidth / width;
-          const pxMargin = marginVal * scale;
-          
           let stylePos = `style="`;
           if (i === 0) { 
-            stylePos += `bottom: ${pxMargin}px; right: ${pxMargin}px;`;
+            stylePos += `bottom: ${M}px; right: ${M}px;`;
           } else if (i === 1) { 
-            stylePos += `bottom: ${pxMargin}px; left: ${pxMargin}px;`;
+            stylePos += `bottom: ${M}px; left: ${M}px;`;
           } else if (i === 2) { 
-            stylePos += `top: ${pxMargin}px; right: ${pxMargin}px;`;
+            stylePos += `top: ${M}px; right: ${M}px;`;
           } else { 
-            stylePos += `top: ${pxMargin}px; left: ${pxMargin}px;`;
+            stylePos += `top: ${M}px; left: ${M}px;`;
           }
           stylePos += `"`;
           noteHtml = `<div class="ticket-note" ${stylePos}>${esc(displayText)}</div>`;
@@ -947,9 +944,15 @@
             ctx.restore();
           };
 
-          const drawTextNote = (text, i, s, margin) => {
+          const drawTextNote = (text, i, s) => {
             if (!showNotes || !text) return;
-            const fontSize = Math.round(W * 0.018);
+            
+            // 画布宽 1200 对应预览宽 320，所以放大比例大概 3.75 倍
+            // 预览字体 10px，对应的画布字体 40px
+            // 预览边距 12px，对应画布边距 48px (拉大边距)
+            const fontSize = Math.round(W / 30); // 1200/30 = 40px
+            const margin = Math.round(W / 25);   // 1200/25 = 48px (边距比之前更大)
+
             ctx.font = `italic 500 ${fontSize}px "Source Han Sans SC", "Noto Sans SC", "PingFang SC", sans-serif`;
             
             const displayText = `“${text}”`;
@@ -977,14 +980,13 @@
             ctx.fillStyle = "#ffffff";
             ctx.textBaseline = "bottom";
             ctx.shadowColor = "rgba(0,0,0,0.8)";
-            ctx.shadowBlur = 4;
-            ctx.shadowOffsetX = 1;
-            ctx.shadowOffsetY = 1;
+            ctx.shadowBlur = 6;
+            ctx.shadowOffsetX = 2;
+            ctx.shadowOffsetY = 2;
             ctx.fillText(displayText, textX, textY);
             ctx.restore();
           };
 
-          const marginVal = template.textMargin !== undefined ? Number(template.textMargin) : 10;
           const slots = Array.isArray(template.slots) ? template.slots : [];
           
           for (let i = 0; i < slots.length; i++) {
@@ -993,7 +995,7 @@
             try {
               const img = await loadImage(photos[i]);
               drawCover(img, s.x, s.y, s.w, s.h, s.radius || 12);
-              drawTextNote(notes[i], i, s, marginVal);
+              drawTextNote(notes[i], i, s);
             } catch (e) { console.warn("照片加载失败", e); }
           }
 
@@ -1024,7 +1026,7 @@
                 try {
                   const img = await loadImage(photos[i]);
                   drawCover(img, s.x, s.y, s.w, s.h, s.radius || 12);
-                  drawTextNote(notes[i], i, s, marginVal);
+                  drawTextNote(notes[i], i, s);
                 } catch (err) {}
               }
               const dataUrl = canvas.toDataURL("image/png");
