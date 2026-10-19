@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <title>网易美好捕手</title>
+  <style>
+    :root {
+      --ink: #17324d;
+      --teal: #147d78;
+      --paper: #f6efe2;
+      --card: rgba(255,252,246,.94);
+      --warn: #c45c26;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      height: 100%;
+      overflow: hidden;
+      background: var(--paper);
+      color: var(--ink);
+      font-family: "PingFang SC","Microsoft YaHei",sans-serif;
+    }
+    button, input, textarea { font: inherit; }
+    .hidden { display: none !important; pointer-events: none !important; }
+    .toast {
+      position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%);
+      background: #17324d; color: #fff; padding: 10px 16px; border-radius: 999px;
+      z-index: 90; max-width: 84vw; font-size: 13px;
+    }
+    .cover {
+      position: fixed; inset: 0; background: #000;
+      z-index: 50; color: #fff;
+    }
+    .cover video {
+      position: absolute; inset: 0;
+      width: 100%; height: 100%;
+      object-fit: cover;
+      background: #000;
+    }
+    .cover .actions {
+      position: absolute;
+      left: 50%;
+      top: 66.66%;
+      transform: translate(-50%, -50%);
+      z-index: 52;
+    }
+    #introFallback {
+      position: absolute; left: 50%; top: 58%;
+      transform: translate(-50%, -50%);
+      z-index: 51;
+    }
+    .primary, .ghost, .chip, .icon-btn { border: 0; cursor: pointer; }
+    .primary, .ghost { border-radius: 999px; padding: 11px 18px; }
+    .primary { background: var(--teal); color: #fff; }
+    .ghost { background: rgba(255,255,255,.92); color: var(--ink); }
+    #app {
+      height: 100%;
+      width: min(100vw, 430px);
+      margin: 0 auto;
+      overflow: hidden;
+      position: relative;
+    }
+    .lay {
+      position: absolute;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .hero img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: block;
+    }
+    .campus-chip {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      font-size: 12px;
+      background: rgba(255,255,255,.78);
+      border: 1px solid rgba(23,50,77,.08);
+      border-radius: 999px;
+      padding: 4px 10px;
+      color: var(--ink);
+      max-width: 100%;
+    }
+    .campus-chip b { font-size: 12px; }
+    .chip {
+      background: transparent;
+      color: var(--teal);
+      font-size: 12px;
+      padding: 0;
+    }
+    .progress {
+      font-size: 12px;
+      color: var(--teal);
+      text-align: center;
+      width: 100%;
+    }
+    .track-wrap {
+      width: 100%;
+      height: 100%;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    .track {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      overflow-x: auto;
+      overflow-y: hidden;
+      padding: 4px 0;
+      scroll-snap-type: x mandatory;
+      -webkit-overflow-scrolling: touch;
+    }
+    .track::-webkit-scrollbar { display: none; }
+    .card {
+      min-width: 78%;
+      background: transparent;
+      border: 0;
+      border-radius: 0;
+      overflow: visible;
+      scroll-snap-align: center;
+      box-shadow: none;
+    }
+    .card.has-image { background: transparent; box-shadow: none; }
+    .card img {
+      width: 100%;
+      height: auto;
+      max-height: 100%;
+      object-fit: contain;
+      background: transparent;
+      display: block;
+    }
+    .card .meta { display: none; }
+    .empty { text-align: center; color: #7a6a55; font-size: 13px; }
+    .grids, .dock {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: transparent;
+    }
+    .dock { flex-direction: column; gap: 8px; }
+    .grids-inner {
+      width: 100%;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+    }
+    .ticket-btn {
+      width: 100%;
+      height: 100%;
+      background: var(--teal);
+      color: #fff;
+      border: 0;
+      border-radius: 999px;
+      padding: 0 12px;
+      font-size: 13px;
+    }
+    .ticket-btn[disabled] {
+      background: rgba(23,50,77,.28);
+      color: #fff;
+    }
+    .grid {
+      aspect-ratio: 1;
+      border-radius: 0;
+      border: 0;
+      display: grid;
+      place-items: center;
+      position: relative;
+      background: transparent;
+      overflow: visible;
+      font-size: 11px;
+      color: #6b5a48;
+    }
+    .grid.lit { background: transparent; box-shadow: none; }
+    .grid img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      background: transparent;
+    }
+    .grid .frame {
+      position: absolute; inset: 0;
+      width: 100%; height: 100%;
+      object-fit: fill;
+      pointer-events: none;
+    }
+    .grid.waiting { opacity: .72; }
+    .grid.me-slot .label { font-size: 10px; line-height: 1.2; text-align: center; }
+    .grid.lit { animation: bounce .5s ease; }
+    @keyframes bounce { 0%{transform:scale(.78)} 60%{transform:scale(1.08)} 100%{transform:scale(1)} }
+    #sheet.sheet {
+      position: fixed; inset: 0;
+      background: rgba(17,24,32,.46);
+      z-index: 40;
+      align-items: center;
+      justify-content: center;
+      padding: 18px;
+      display: none;
+    }
+    #sheet.sheet:not(.hidden) { display: flex; }
+    .panel {
+      position: relative;
+      width: min(92vw, 420px);
+      max-height: 84vh;
+      overflow: hidden;
+      background: #fffaf3;
+      border-radius: 22px;
+      padding: 42px 18px 18px;
+    }
+    .panel-body { overflow: auto; max-height: calc(84vh - 60px); }
+    .icon-btn {
+      position: absolute; top: 10px; right: 10px;
+      width: 32px; height: 32px; border-radius: 50%;
+      background: rgba(23,50,77,.08); color: var(--ink);
+    }
+    .campus-list, .done-list { display: grid; gap: 10px; }
+    .pick {
+      display: flex; gap: 10px; align-items: center;
+      background: #fff; border-radius: 16px; padding: 10px; border: 0; text-align: left; width: 100%;
+    }
+    .pick img { width: 56px; height: 56px; object-fit: contain; background: transparent; }
+    textarea, input[type=file] { width: 100%; margin: 8px 0; }
+    textarea { min-height: 76px; border-radius: 12px; border: 1px solid #e4d8c4; padding: 10px; }
+    .ticket { display: flex; justify-content: center; }
+    .ticket-stage {
+      position: relative;
+      width: 100%;
+      max-width: 320px;
+      aspect-ratio: 2 / 3;
+      background: #f3e6cf;
+      overflow: hidden;
+      border-radius: 8px;
+    }
+    .ticket-slot {
+      position: absolute;
+      overflow: hidden;
+      background: #d9cbb6;
+    }
+    .ticket-slot img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .ticket-frame {
+      position: absolute; inset: 0; width: 100%; height: 100%;
+      object-fit: fill; pointer-events: none;
+    }
+    .type-pop { text-align: center; padding: 6px 8px 14px; }
+    .hint { font-size: 12px; color: #6b7280; line-height: 1.6; white-space: pre-wrap; }
+    .btn-row { display: flex; gap: 8px; justify-content: center; margin-top: 12px; flex-wrap: wrap; }
+    .spot-visual { width: 100%; max-height: 180px; object-fit: contain; background: transparent; }
+  </style>
+</head>
+<body>
+  <div id="toast" class="toast hidden"></div>
+  <section id="intro" class="cover hidden">
+    <video id="introVideo" playsinline autoplay muted></video>
+    <p id="introFallback" class="hidden">动画加载中…若无法播放可直接进入</p>
+    <div class="actions">
+      <button class="primary" id="skipIntro">进入活动</button>
+    </div>
+  </section>
+
+  <main id="app">
+    <header class="hero lay" id="layTitle"><img id="titleImg" alt="活动主题" /></header>
+    <button class="campus-chip lay" id="btnCampus" type="button">
+      我在【<b id="campusName">未选择</b>】园区
+    </button>
+    <p class="progress lay" id="progressText"></p>
+    <div class="track-wrap lay" id="layTrack">
+      <section id="track" class="track"></section>
+      <p id="emptyTrack" class="empty hidden">当前园区暂无待打卡点位</p>
+    </div>
+    <section class="grids lay" id="layGrids">
+      <div class="dock">
+        <div class="grids-inner" id="grids"></div>
+      </div>
+    </section>
+    <button class="ticket-btn lay" id="btnTicket" type="button">生成票根</button>
+  </main>
+
+  <div id="sheet" class="sheet hidden">
+    <div class="panel">
+      <button class="icon-btn" id="sheetClose" type="button" aria-label="关闭">×</button>
+      <div class="panel-body" id="panel"></div>
+    </div>
+  </div>
+
+  <canvas id="ticketCanvas" class="hidden"></canvas>
+  <script src="config.js"></script>
+  <script>
+    const EMBEDDED_BOOT = {"ok": true, "activity": {"title": "网易美好捕手", "titleImageUrl": "https://i.imgs.ovh/2026/10/16/0175d1aaa94969aca947ba3ac201f9fd.jpg", "backgroundUrl": "https://i.imgs.ovh/2026/10/16/7ff2d6796e7c4e8cbad168503eb964b2.png", "introVideoUrl": "https://pictureurl.com/api/storage/file?key=u%2Fanon%2F8545ce4f-f0f5-4a7d-8df5-b28212cfb5a8-_______IP_______.mp4", "progressFrameUrl": "https://i.imgs.ovh/2026/10/16/09f7e31dcabb10c4e33f2ab3962e5dd4.png", "playGuide": "【玩法说明预留，后续可在后台修改】\n1. 选择当前所在园区。\n2. 滑动查看可打卡点位，根据谜面前往线下点位。\n3. 扫描点位二维码上传点位照片即可完成打卡。\n4. 完成任意 3 个不同点位后，上传与 Soci 的合照。\n5. 即可生成网易美好四宫格，可前往园区服务台领取惊喜。", "prizeHint": "可前往当前园区服务台领取惊喜奖品，也可保存票根图片分享至易网评论区参与惊喜抽奖。", "sociMeaning": "与 Soci 合照，展现“你是网易美好的重要组成”。", "layout": {"canvas": {"w": 390, "h": 844}, "items": {"title": {"x": 0, "y": 2, "w": 100, "h": 18.6, "hidden": true}, "campus": {"x": 26.6, "y": 20.5, "w": 45.6, "h": 4}, "progress": {"x": 18, "y": 87.7, "w": 64, "h": 3}, "track": {"x": 0, "y": 28.1, "w": 100, "h": 40.4}, "grids": {"x": 10, "y": 71.7, "w": 80, "h": 16}, "ticketBtn": {"x": 27.7, "y": 90.5, "w": 44, "h": 5.5}}}, "rules": {"requiredSpotCount": 3}}, "campuses": [], "spots": [], "ticketTemplate": {}};
+
+    const state = {
+      boot: null,
+      me: null,
+      employeeId: localStorage.getItem("nh_employee_id") || "",
+      pendingSpot: null,
+      entered: false,
+      guideShown: false,
+    };
+    const $ = (id) => document.getElementById(id);
+    const toast = (msg) => {
+      const el = $("toast");
+      el.textContent = msg;
+      el.classList.remove("hidden");
+      setTimeout(() => el.classList.add("hidden"), 2400);
+    };
+    const esc = (value) => String(value || "").replace(/[&<>"']/g, (ch) => ({
+      "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+    }[ch]));
+
+    function saveMe() {
+      try {
+        if (state.me && state.me.employeeId) {
+          localStorage.setItem("nh_me_" + state.me.employeeId, JSON.stringify(state.me));
+        }
+      } catch (e) {
+        // 容量满时忽略，不打断流程
+      }
+    }
+
+    function recalcProgress() {
+      if (!state.me) return;
+      const required = (state.boot && state.boot.rules && state.boot.rules.requiredSpotCount) || 3;
+      const completedSpots = state.me.completedSpots || [];
+      const latest = completedSpots.slice(-3).reverse();
+      state.me.progress = {
+        completed: completedSpots.length,
+        required,
+        unlocked: completedSpots.length >= required,
+        latest,
+      };
+    }
+
+    function compressImage(file, maxSize, quality) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const img = new Image();
+          img.onload = () => {
+            let w = img.width, h = img.height;
+            if (w > maxSize || h > maxSize) {
+              const ratio = Math.min(maxSize / w, maxSize / h);
+              w = Math.round(w * ratio);
+              h = Math.round(h * ratio);
+            }
+            const canvas = document.createElement("canvas");
+            canvas.width = w;
+            canvas.height = h;
+            const ctx = canvas.getContext("2d");
+            ctx.drawImage(img, 0, 0, w, h);
+            resolve(canvas.toDataURL("image/jpeg", quality));
+          };
+          img.onerror = () => reject(new Error("图片解析失败"));
+          img.src = reader.result;
+        };
+        reader.onerror = () => reject(new Error("读取失败"));
+        reader.readAsDataURL(file);
+      });
+    }
+
+    function closeSheet() { $("sheet").classList.add("hidden"); }
+    function openSheet(html) {
+      $("panel").innerHTML = html;
+      $("sheet").classList.remove("hidden");
+    }
+
+    function inCampus(spot, campusId) {
+      const ids = spot.campusIds && spot.campusIds.length ? spot.campusIds : (spot.campusId ? [spot.campusId] : []);
+      return ids.includes(campusId);
+    }
+
+    function renderGrids() {
+      const latest = ((state.me && state.me.progress && state.me.progress.latest) || (state.me && state.me.completedSpots) || []).slice(0, 3);
+      const soci = state.me && state.me.sociPhotoUrl;
+      const frame = state.boot.activity.progressFrameUrl || "/mws-cms-nicehunt/api/page/assets/stamp-frame.svg";
+      const cells = [0,1,2].map((i) => {
+        const frameImg = `<img class="frame" src="${esc(frame)}" alt="">`;
+        const rec = latest[i];
+        return rec
+          ? `<button class="grid lit" data-id="${esc(rec.id)}">${frameImg}<img src="${esc(rec.photoUrl)}" alt="${esc(rec.spot.name)}"></button>`
+          : `<div class="grid waiting">${frameImg}<span>${i + 1}</span></div>`;
+      }).join("");
+      const meFrame = `<img class="frame" src="${esc(frame)}" alt="">`;
+      const meCell = soci
+        ? `<button class="grid lit me-slot" data-kind="soci">${meFrame}<img src="${esc(soci)}" alt="我的照片"></button>`
+        : `<button class="grid waiting me-slot" data-kind="soci">${meFrame}<span class="label">我的照片<br>/ SOCI</span></button>`;
+      $("grids").innerHTML = cells + meCell;
+      $("grids").querySelectorAll("button.grid").forEach((btn) => {
+        btn.onclick = () => {
+          if (btn.dataset.kind === "soci") showSociSlot();
+          else showRecord(btn.dataset.id);
+        };
+      });
+    }
+
+    function applyLayout() {
+      const layout = (state.boot.activity && state.boot.activity.layout) || {};
+      const items = layout.items || {};
+      const map = {
+        title: $("layTitle"),
+        campus: $("btnCampus"),
+        progress: $("progressText"),
+        track: $("layTrack"),
+        grids: $("layGrids"),
+        ticketBtn: $("btnTicket"),
+      };
+      Object.keys(map).forEach((key) => {
+        const el = map[key];
+        const box = items[key];
+        if (!el) return;
+        if (!box || box.hidden) {
+          el.classList.add("hidden");
+          return;
+        }
+        el.classList.remove("hidden");
+        el.style.left = box.x + "%";
+        el.style.top = box.y + "%";
+        el.style.width = box.w + "%";
+        el.style.height = box.h + "%";
+      });
+    }
+
+    function renderHome() {
+      const boot = state.boot;
+      $("titleImg").src = boot.activity.titleImageUrl;
+      document.body.style.background = `url('${boot.activity.backgroundUrl}') center/cover no-repeat fixed`;
+      applyLayout();
+      const campus = state.me && state.me.campus;
+      $("campusName").textContent = campus ? campus.name : "未选择";
+      const p = state.me && state.me.progress;
+      $("progressText").textContent = p
+        ? `已完成 ${p.completed}/${p.required} 项${p.unlocked ? " · 可生成票根" : ""}`
+        : "";
+      const spots = (state.me.pendingSpots || []).filter((s) => {
+        if (!state.me.campus) return true;
+        const ids = s.campusIds && s.campusIds.length ? s.campusIds : (s.campusId ? [s.campusId] : []);
+        return ids.includes(state.me.campus.id);
+      });
+      $("track").innerHTML = spots.map((s) => `
+        <article class="card ${s.cardImageUrl ? "has-image" : ""}" data-id="${esc(s.id)}">
+          <img src="${esc(s.cardImageUrl)}" alt="${esc(s.name)}">
+        </article>`).join("");
+      $("emptyTrack").classList.toggle("hidden", spots.length > 0);
+      $("track").classList.toggle("hidden", spots.length === 0);
+      $("track").querySelectorAll(".card").forEach((el) => {
+        el.onclick = () => showSpot(el.dataset.id);
+      });
+      renderGrids();
+      const btn = $("btnTicket");
+      const layoutHidden = !!(boot.activity.layout && boot.activity.layout.items && boot.activity.layout.items.ticketBtn && boot.activity.layout.items.ticketBtn.hidden);
+      const ready = p && p.unlocked;
+      if (layoutHidden) btn.classList.add("hidden");
+      else btn.classList.toggle("hidden", !ready);
+      btn.disabled = !ready;
+      btn.textContent = "生成票根";
+    }
+
+    async function ensureId() {
+      if (!state.employeeId) {
+        state.employeeId = localStorage.getItem("nh_employee_id")
+          || (crypto.randomUUID ? crypto.randomUUID() : "u-" + Date.now() + "-" + Math.random().toString(36).slice(2, 8));
+        localStorage.setItem("nh_employee_id", state.employeeId);
+      }
+      const saved = localStorage.getItem("nh_me_" + state.employeeId);
+      if (saved) {
+        try { state.me = JSON.parse(saved); } catch (e) { state.me = null; }
+      }
+      if (!state.me) {
+        state.me = {
+          employeeId: state.employeeId,
+          campus: null,
+          progress: { completed: 0, required: 3, unlocked: false, latest: [] },
+          pendingSpots: [],
+          completedSpots: [],
+          sociPhotoUrl: "",
+        };
+      }
+      if (!state.me.completedSpots) state.me.completedSpots = [];
+      if (!state.me.pendingSpots || !state.me.pendingSpots.length) {
+        const doneIds = state.me.completedSpots.map((r) => r.spotId);
+        state.me.pendingSpots = (state.boot.spots || []).filter((s) => !doneIds.includes(s.id));
+      }
+      recalcProgress();
+      saveMe();
+    }
+
+    function showPlayGuide() {
+      if (state.guideShown) return;
+      state.guideShown = true;
+      openSheet(`
+        <h3 style="text-align:center;margin-bottom:10px">活动玩法</h3>
+        <p class="hint">${esc(state.boot.activity.playGuide)}</p>
+        <div class="btn-row"><button class="primary" id="guideOk">我知道了</button></div>
+      `);
+      $("guideOk").onclick = closeSheet;
+    }
+
+    function showCampusPicker(forceHint) {
+      const list = (state.boot.campuses || []).map((c) => `
+        <button class="pick" data-id="${esc(c.id)}">
+          <img src="${esc(c.coverUrl)}" alt="${esc(c.name)}">
+          <div><b>${esc(c.name)}</b><div class="hint">${esc(c.intro || "")}</div></div>
+        </button>`).join("");
+      openSheet(`
+        <h3 style="text-align:center;margin-bottom:10px">选择园区</h3>
+        ${forceHint ? `<p class="hint">${esc(forceHint)}</p>` : ""}
+        <div class="campus-list">${list || '<p class="hint">暂无可选园区</p>'}</div>
+      `);
+      $("panel").querySelectorAll(".pick").forEach((btn) => {
+        btn.onclick = () => chooseCampus(btn.dataset.id);
+      });
+    }
+
+    async function chooseCampus(campusId, force) {
+      const campus = (state.boot.campuses || []).find((c) => c.id === campusId);
+      if (!campus) { toast("园区不存在"); return; }
+      const hasProgress = (state.me.completedSpots || []).length > 0;
+      if (!force && state.me.campus && state.me.campus.id !== campusId && hasProgress) {
+        openSheet(`
+          <h3 style="text-align:center">切换园区？</h3>
+          <p class="hint">切换园区后，已完成的打卡记录仍保留在本机浏览器中。</p>
+          <div class="btn-row">
+            <button class="primary" id="forceSwitch">仍要切换</button>
+          </div>
+        `);
+        $("forceSwitch").onclick = () => chooseCampus(campusId, true);
+        return;
+      }
+      state.me.campus = campus;
+      saveMe();
+      closeSheet();
+      renderHome();
+    }
+
+    function spotById(id) {
+      const all = [...((state.me && state.me.pendingSpots) || []), ...((state.me && state.me.completedSpots) || []).map((r) => r.spot)];
+      return all.find((s) => s.id === id);
+    }
+
+    function showSpot(id) {
+      const spot = spotById(id) || state.pendingSpot;
+      if (!spot) return;
+      const campusId = state.me.campus && state.me.campus.id;
+      const mismatch = campusId && !inCampus(spot, campusId);
+      openSheet(`
+        <img class="spot-visual" src="${esc(spot.detailImageUrl)}" alt="${esc(spot.name)}">
+        <h3 style="text-align:center;margin:10px 0 6px">${esc(spot.name)}</h3>
+        <p class="hint">${esc(spot.intro || "")}</p>
+        ${mismatch ? `<p class="hint">该点位未包含当前园区标签，提交前请确认。</p>` : ""}
+        <label class="hint">上传现场照片
+          <input id="photo" type="file" accept="image/jpeg,image/png,image/webp" capture="environment">
+        </label>
+        <textarea id="note" placeholder="填写说明"></textarea>
+        <div class="btn-row"><button class="primary" id="submitCheckin">提交打卡</button></div>
+      `);
+      $("submitCheckin").onclick = () => submitCheckin(spot);
+    }
+
+    async function submitCheckin(spot) {
+      const file = $("photo").files[0];
+      const note = $("note").value;
+      if (!file) return toast("请先选择照片");
+      if (state.me.campus && !inCampus(spot, state.me.campus.id)) {
+        openSheet(`
+          <h3 style="text-align:center">园区不一致</h3>
+          <p class="hint">当前选择是 ${esc(state.me.campus.name)}，该点位未配置此园区标签。</p>
+          <div class="btn-row"><button class="primary" id="fixCampus">查看点位可去园区</button></div>
+        `);
+        $("fixCampus").onclick = () => showCampusPicker();
+        return;
+      }
+      $("submitCheckin").disabled = true;
+      $("submitCheckin").textContent = "处理中…";
+      try {
+        const dataUrl = await compressImage(file, 1000, 0.72);
+        const rec = {
+          id: "rec-" + Date.now() + "-" + Math.random().toString(36).slice(2, 8),
+          spotId: spot.id,
+          spot: spot,
+          photoUrl: dataUrl,
+          note: note || "",
+          createdAt: Date.now(),
+        };
+        const list = (state.me.completedSpots || []).filter((r) => r.spotId !== spot.id);
+        list.push(rec);
+        state.me.completedSpots = list;
+        state.me.pendingSpots = (state.me.pendingSpots || []).filter((s) => s.id !== spot.id);
+        recalcProgress();
+        saveMe();
+        closeSheet();
+        renderHome();
+        toast("打卡成功");
+      } catch (err) {
+        toast("照片处理失败：" + err.message);
+        $("submitCheckin").disabled = false;
+        $("submitCheckin").textContent = "失败，点此重试";
+      }
+    }
+
+    function showRecord(id) {
+      const rec = (state.me.completedSpots || []).find((r) => r.id === id);
+      if (!rec) return;
+      openSheet(`<h3 style="text-align:center">${esc(rec.spot.name)}</h3><img src="${esc(rec.photoUrl)}" style="width:100%;border-radius:16px;object-fit:contain"><p class="hint">${esc(rec.note || "无说明")}</p>`);
+    }
+
+    function showSociSlot() {
+      const has = state.me && state.me.sociPhotoUrl;
+      openSheet(`
+        <h3 style="text-align:center">我的照片 / SOCI</h3>
+        <p class="hint">${esc(state.boot.activity.sociMeaning)}</p>
+        ${has ? `<img src="${esc(state.me.sociPhotoUrl)}" style="width:100%;border-radius:16px;object-fit:contain">` : ""}
+        <label class="hint">上传自己的照片，或与 Soci 的合照
+          <input id="sociFile" type="file" accept="image/jpeg,image/png,image/webp" capture="environment">
+        </label>
+        <textarea id="sociNote" placeholder="可选说明"></textarea>
+        <div class="btn-row"><button class="primary" id="submitSoci">${has ? "重新上传" : "上传照片"}</button></div>
+      `);
+      $("submitSoci").onclick = submitSoci;
+    }
+
+    async function submitSoci() {
+      const file = $("sociFile").files[0];
+      if (!file) return toast("请选择照片");
+      $("submitSoci").disabled = true;
+      $("submitSoci").textContent = "处理中…";
+      try {
+        const dataUrl = await compressImage(file, 1000, 0.72);
+        state.me.sociPhotoUrl = dataUrl;
+        saveMe();
+        closeSheet();
+        renderHome();
+        toast("已保存到第 4 格");
+      } catch (err) {
+        toast("照片处理失败：" + err.message);
+        $("submitSoci").disabled = false;
+        $("submitSoci").textContent = "失败，点此重试";
+      }
+    }
+
+    function openTicketFlow() {
+      if (!state.me || !state.me.progress || !state.me.progress.unlocked) {
+        toast("完成任意 3 项打卡后可生成票根");
+        return;
+      }
+      composeFromGrids();
+    }
+
+    async function composeFromGrids() {
+      const latest = ((state.me.progress && state.me.progress.latest) || []).slice(0, 3);
+      const photos = latest.map((r) => r.photoUrl);
+      if (state.me.sociPhotoUrl) photos.push(state.me.sociPhotoUrl);
+      const template = state.boot.ticketTemplate || {};
+      $("btnTicket").disabled = true;
+      $("btnTicket").textContent = "生成中…";
+      try {
+        showTypeAndTicket({
+          template: template,
+          ticket: { photos },
+          typeResult: { name: "美好捕手", description: "活动趣味结果，非正式测评" },
+          activity: state.boot.activity,
+        });
+      } catch (err) {
+        toast(err.message || "生成失败");
+      } finally {
+        $("btnTicket").disabled = false;
+        $("btnTicket").textContent = "生成票根";
+      }
+    }
+
+    function renderTicketStage(template, photos) {
+      const width = Number(template.width) || 1200;
+      const height = Number(template.height) || 1800;
+      const slots = Array.isArray(template.slots) ? template.slots : [];
+      const frameUrl = template.frameImageUrl || template.imageUrl || "";
+      const slotHtml = slots.map((slot, i) => {
+        const photo = photos[i] || "";
+        return `<div class="ticket-slot" style="left:${slot.x/width*100}%;top:${slot.y/height*100}%;width:${slot.w/width*100}%;height:${slot.h/height*100}%;border-radius:${slot.radius || 12}px">${photo ? `<img src="${esc(photo)}" alt="">` : ""}</div>`;
+      }).join("");
+      const frameHtml = frameUrl && !/placehold\.co/i.test(frameUrl)
+        ? `<img class="ticket-frame" src="${esc(frameUrl)}" alt="票根框">`
+        : "";
+      return `<div class="ticket-stage">${slotHtml}${frameHtml}</div>`;
+    }
+
+    // 内嵌票根合成：替代原外部 ticket.js 的 composeTicketCanvas
+    function composeTicketCanvas({ activity, template, photos, canvas }) {
+      return new Promise(async (resolve, reject) => {
+        try {
+          const W = Number(template.width) || 1200;
+          const H = Number(template.height) || 1800;
+          canvas.width = W;
+          canvas.height = H;
+          const ctx = canvas.getContext("2d");
+          ctx.fillStyle = "#f3e6cf";
+          ctx.fillRect(0, 0, W, H);
+
+          const loadImage = (src) => new Promise((res, rej) => {
+            const img = new Image();
+            if (!/^data:/.test(src)) img.crossOrigin = "anonymous";
+            img.onload = () => res(img);
+            img.onerror = () => rej(new Error("图片加载失败"));
+            img.src = src;
+          });
+
+          const drawCover = (img, x, y, w, h, radius) => {
+            ctx.save();
+            const r = Math.min(radius || 0, w / 2, h / 2);
+            ctx.beginPath();
+            ctx.moveTo(x + r, y);
+            ctx.arcTo(x + w, y, x + w, y + h, r);
+            ctx.arcTo(x + w, y + h, x, y + h, r);
+            ctx.arcTo(x, y + h, x, y, r);
+            ctx.arcTo(x, y, x + w, y, r);
+            ctx.closePath();
+            ctx.clip();
+            const scale = Math.max(w / img.width, h / img.height);
+            const dw = img.width * scale;
+            const dh = img.height * scale;
+            ctx.drawImage(img, x + (w - dw) / 2, y + (h - dh) / 2, dw, dh);
+            ctx.restore();
+          };
+
+          const slots = Array.isArray(template.slots) ? template.slots : [];
+          for (let i = 0; i < slots.length; i++) {
+            const s = slots[i];
+            if (!photos[i]) continue;
+            try {
+              const img = await loadImage(photos[i]);
+              drawCover(img, s.x, s.y, s.w, s.h, s.radius || 12);
+            } catch (e) { /* 单张失败跳过 */ }
+          }
+
+          const frameUrl = template.frameImageUrl || template.imageUrl;
+          if (frameUrl && !/placehold\.co/i.test(frameUrl)) {
+            try {
+              const frame = await loadImage(frameUrl);
+              ctx.drawImage(frame, 0, 0, W, H);
+            } catch (e) { /* 外框失败则不叠加 */ }
+          }
+
+          resolve(canvas.toDataURL("image/png"));
+        } catch (err) {
+          reject(err);
+        }
+      });
+    }
+
+    async function showTypeAndTicket(data) {
+      const template = data.template || state.boot.ticketTemplate || {};
+      const typeName = (data.typeResult && data.typeResult.name) || "";
+      const typeDesc = (data.typeResult && data.typeResult.description) || "";
+      openSheet(`
+        <div class="type-pop">
+          <p class="hint">活动趣味结果，非正式测评</p>
+          <h3>${esc(typeName)}</h3>
+          <p class="hint">${esc(typeDesc)}</p>
+        </div>
+        <div class="ticket">${renderTicketStage(template, data.ticket.photos)}</div>
+        <p class="hint">${esc(data.activity.prizeHint)}</p>
+        <div class="btn-row">
+          <button class="primary" id="saveTicket">保存图片</button>
+          <button class="ghost" id="closeTicket">关闭</button>
+        </div>
+      `);
+      $("closeTicket").onclick = closeSheet;
+      $("saveTicket").onclick = async () => {
+        $("saveTicket").disabled = true;
+        $("saveTicket").textContent = "导出中…";
+        try {
+          const url = await composeTicketCanvas({
+            activity: data.activity,
+            template,
+            photos: data.ticket.photos,
+            canvas: $("ticketCanvas"),
+          });
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = "nicehunt-ticket.png";
+          a.click();
+        } catch (err) {
+          toast(err.message || "导出失败，请截图保存预览");
+        } finally {
+          $("saveTicket").disabled = false;
+          $("saveTicket").textContent = "保存图片";
+        }
+      };
+    }
+
+    async function boot() {
+      try {
+        state.boot = window.BOOT_CONFIG || EMBEDDED_BOOT;
+        if (!state.boot || !state.boot.activity) throw new Error("配置缺失");
+      } catch (err) {
+        toast(err.message);
+        return;
+      }
+      $("intro").classList.remove("hidden");
+      $("app").classList.add("hidden");
+      const video = $("introVideo");
+      const url = state.boot.activity.introVideoUrl;
+      if (url) {
+        video.src = url;
+        video.muted = true;
+        video.loop = false;
+        const play = video.play();
+        if (play && play.catch) play.catch(() => $("introFallback").classList.remove("hidden"));
+        video.onended = () => enterApp();
+        video.onerror = () => $("introFallback").classList.remove("hidden");
+      } else {
+        $("introFallback").classList.remove("hidden");
+      }
+      $("skipIntro").onclick = enterApp;
+    }
+
+    async function enterApp() {
+      if (state.entered) return;
+      state.entered = true;
+      const video = $("introVideo");
+      video.onended = null;
+      video.pause();
+      $("intro").classList.add("hidden");
+      $("app").classList.remove("hidden");
+      try {
+        await ensureId();
+        renderHome();
+        const params = new URLSearchParams(location.search);
+        const spotId = params.get("spot");
+        if (spotId) {
+          const found = (state.boot.spots || []).find((s) => s.id === spotId);
+          if (!found) {
+            toast("点位不存在");
+            showPlayGuide();
+            return;
+          }
+          state.pendingSpot = found;
+          if (state.me.campus && !inCampus(found, state.me.campus.id)) {
+            openSheet(`<h3 style="text-align:center">园区不一致</h3><p class="hint">扫码点位未包含当前园区标签。</p><div class="btn-row"><button class="primary" id="goSpot">查看点位</button></div>`);
+            $("goSpot").onclick = () => showSpot(spotId);
+          } else showSpot(spotId);
+        } else {
+          showPlayGuide();
+        }
+      } catch (err) { toast(err.message); }
+    }
+
+    $("btnCampus").onclick = () => showCampusPicker();
+    $("btnTicket").onclick = openTicketFlow;
+    $("sheetClose").onclick = closeSheet;
+    $("sheet").onclick = (e) => { if (e.target.id === "sheet") closeSheet(); };
+    boot();
+  </script>
+</body>
+</html>
