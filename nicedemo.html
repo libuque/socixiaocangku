@@ -46,8 +46,7 @@
       z-index: 52;
     }
     #introFallback {
-      position: absolute;
-      left: 50%; top: 58%;
+      position: absolute; left: 50%; top: 58%;
       transform: translate(-50%, -50%);
       z-index: 51;
     }
@@ -292,6 +291,7 @@
       background: rgba(23,50,77,.08); color: var(--ink);
     }
     
+    /* 居中列表样式 */
     .campus-list { display: grid; gap: 10px; }
     .pick {
       display: flex; flex-direction: column; gap: 8px; align-items: center; justify-content: center;
@@ -388,6 +388,7 @@
     .spot-title { text-align: center; margin: 10px 0 6px; }
     .spot-intro { text-align: center; margin-bottom: 8px; }
 
+    /* 认证表单样式，全部居中 */
     .form-group { margin-bottom: 16px; text-align: center; }
     .form-group label { display: block; font-size: 14px; color: #6b7280; margin-bottom: 6px; font-weight: bold; }
     .form-group input, .form-group select { 
@@ -397,9 +398,9 @@
       border: 1px solid #e4d8c4; 
       background: #fff;
       font-size: 15px;
-      text-align: center;
-      text-align-last: center; 
-      appearance: none; 
+      text-align: center; /* 文字居中 */
+      text-align-last: center; /* 下拉框文字居中 */
+      appearance: none; /* 移除默认箭头 */
       -webkit-appearance: none;
       background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
       background-repeat: no-repeat;
@@ -420,6 +421,7 @@
   </section>
 
   <main id="app">
+    <!-- 用户标签 -->
     <div id="userBadge" class="user-badge hidden"></div>
 
     <header class="hero lay" id="layTitle"><img id="titleImg" alt="活动主题" /></header>
@@ -449,15 +451,6 @@
   <canvas id="ticketCanvas" class="hidden"></canvas>
   <script src="config.js"></script>
   <script>
-    // ================= 数据回收配置区 =================
-    // 1. 填入你的 GitHub 用户名/仓库名，例如 "zhangsan/nicehunt-activity"
-    const GITHUB_REPO = "libuque/socixiaocangku"; 
-    // 2. 填入刚才申请的 GitHub Token (ghp_ 开头)
-    const GITHUB_TOKEN = "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"; 
-    // 3. Freeimage 免费图床公钥
-    const FREEIMAGE_KEY = "6d207e02198a847aa98d0a2a901485a5";
-    // =================================================
-
     const EMBEDDED_BOOT = {"ok": true, "activity": {"title": "网易美好捕手", "titleImageUrl": "https://i.imgs.ovh/2026/10/16/0175d1aaa94969aca947ba3ac201f9fd.jpg", "backgroundUrl": "https://i.imgs.ovh/2026/10/16/7ff2d6796e7c4e8cbad168503eb964b2.png", "introVideoUrl": "https://pictureurl.com/api/storage/file?key=u%2Fanon%2F8545ce4f-f0f5-4a7d-8df5-b28212cfb5a8-_______IP_______.mp4", "progressFrameUrl": "https://i.imgs.ovh/2026/10/16/09f7e31dcabb10c4e33f2ab3962e5dd4.png", "playGuide": "【玩法说明预留，后续可在后台修改】\n1. 选择当前所在园区。\n2. 滑动查看可打卡点位，根据谜面前往线下点位。\n3. 扫描点位二维码上传点位照片即可完成打卡。\n4. 完成任意 3 个不同点位后，上传与 Soci 的合照。\n5. 即可生成网易美好四宫格，可前往园区服务台领取惊喜。", "prizeHint": "可前往当前园区服务台领取惊喜奖品，也可保存票根图片分享至易网评论区参与惊喜抽奖。", "sociMeaning": "与 Soci 合照，展现“你是网易美好的重要组成”。", "layout": {"canvas": {"w": 390, "h": 844}, "items": {"title": {"x": 0, "y": 2, "w": 100, "h": 18.6, "hidden": true}, "campus": {"x": 26.6, "y": 20.5, "w": 45.6, "h": 4}, "progress": {"x": 18, "y": 87.7, "w": 64, "h": 3}, "track": {"x": 0, "y": 28.1, "w": 100, "h": 40.4}, "grids": {"x": 10, "y": 71.7, "w": 80, "h": 16}, "ticketBtn": {"x": 27.7, "y": 90.5, "w": 44, "h": 5.5}}}, "rules": {"requiredSpotCount": 3}, "gridLabels": ["捕捉瞬间", "捕捉瞬间", "捕捉瞬间", "与SOCI合照"]}, "campuses": [], "spots": [], "typeRules": [], "ticketTemplate": {}};
 
     const state = {
@@ -689,63 +682,7 @@
       saveMe();
     }
 
-    // ================= 后台数据回收函数 =================
-    async function uploadRecordToGitHub(typeName, base64Image) {
-      if (!state.me || !state.me.userInfo || !state.me.userInfo.id) return;
-      
-      try {
-        // 1. 上传图片到 freeimage 拿直链
-        const blob = await (await fetch(base64Image)).blob();
-        const formData = new FormData();
-        formData.append("source", blob, "upload.jpg");
-        
-        const imgRes = await fetch(`https://freeimage.host/api/1/upload?key=${FREEIMAGE_KEY}`, {
-          method: "POST",
-          body: formData
-        });
-        const imgData = await imgRes.json();
-        
-        if (!imgData || !imgData.image || !imgData.image.url) {
-          throw new Error("图片上传失败");
-        }
-        const publicImageUrl = imgData.image.url;
-        
-        // 2. 获取时间
-        const timeStr = new Date().toLocaleString('zh-CN', { hour12: false });
-        
-        // 3. 组装 Issue 内容（这里展示出来的就是你以后看数据的格式）
-        const issueTitle = `[上传记录] ${state.me.userInfo.id} - ${typeName}`;
-        const issueBody = `
-**工号**: ${state.me.userInfo.id}
-**类型**: ${typeName}
-**时间**: ${timeStr}
-
-**图片**:
-![图片](${publicImageUrl})
-[点击查看原图](${publicImageUrl})
-`;
-
-        // 4. 发送给 GitHub API 自动创建 Issue
-        await fetch(`https://api.github.com/repos/${GITHUB_REPO}/issues`, {
-          method: "POST",
-          headers: {
-            "Authorization": `token ${GITHUB_TOKEN}`,
-            "Accept": "application/vnd.github.v3+json",
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({
-            title: issueTitle,
-            body: issueBody
-          })
-        });
-        
-        console.log(`[回收成功] 工号:${state.me.userInfo.id} 类型:${typeName}`);
-      } catch (err) {
-        console.warn("数据回收失败:", err);
-      }
-    }
-    // ====================================================
-
+    // 检查并弹出首次登录认证
     function checkAuth() {
       if (state.me.userInfo && state.me.campus) return false;
       
@@ -796,7 +733,7 @@
         toast("认证成功，开启捕手之旅");
       };
       
-      return true; 
+      return true; // 弹出了认证
     }
 
     function showPlayGuide() {
@@ -809,7 +746,7 @@
       `);
       $("guideOk").onclick = () => {
         closeSheet();
-        checkAuth(); 
+        checkAuth(); // 看完玩法强制认证
       };
     }
 
@@ -948,10 +885,6 @@
         closeSheet();
         renderHome();
         toast("打卡信息已更新");
-        
-        // 触发回收
-        uploadRecordToGitHub(spot.name, dataUrl); 
-        
       } catch (err) {
         toast("照片处理失败：" + err.message);
         $("submitCheckin").disabled = false;
@@ -1022,10 +955,6 @@
         closeSheet();
         renderHome();
         toast("已保存到第 4 格");
-        
-        // 触发回收
-        uploadRecordToGitHub("SOCI合照", dataUrl);
-        
       } catch (err) {
         toast("照片处理失败：" + err.message);
         $("submitSoci").disabled = false;
@@ -1180,10 +1109,11 @@
             ctx.restore();
           };
 
+          // 新增：画底部居中的昵称
           const drawNickname = () => {
             if (!showNotes || !state.me.userInfo || !state.me.userInfo.name) return;
             const fontSize = Math.round(W / 45); 
-            const margin = Math.round(W / 30); 
+            const margin = Math.round(W / 30); // 距离底边的边距
 
             ctx.font = `italic 500 ${fontSize}px "Source Han Sans SC", "Noto Sans SC", "PingFang SC", sans-serif`;
             
@@ -1227,7 +1157,7 @@
             }
           }
 
-          drawNickname();
+          drawNickname(); // 外框之上画昵称
 
           try {
             const dataUrl = canvas.toDataURL("image/png");
@@ -1311,9 +1241,6 @@
           $("ticketPreviewArea").innerHTML = `<img src="${res.url}" style="width:100%; border-radius:12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);" alt="票根">`;
           $("saveTip").classList.remove("hidden");
           
-          // 触发回收
-          uploadRecordToGitHub("票根", res.url);
-          
           if (res.degraded) {
             toast("由于外框图跨域限制，已生成不带外框的图片。");
           }
@@ -1334,6 +1261,7 @@
     }
 
     async function boot() {
+      // 测试神器：如果链接带有 ?reset=1，则清空当前本地数据
       const params = new URLSearchParams(location.search);
       if (params.get("reset") === "1") {
         localStorage.removeItem("nh_employee_id");
@@ -1342,6 +1270,7 @@
           if (key && key.startsWith("nh_me_")) localStorage.removeItem(key);
         }
         toast("已重置所有记录");
+        // 将地址栏的 ?reset=1 去掉，防止一直刷新
         const newParams = new URLSearchParams(location.search);
         newParams.delete("reset");
         const newSearch = newParams.toString() ? "?" + newParams.toString() : "";
@@ -1402,6 +1331,7 @@
           const found = (state.boot.spots || []).find((s) => s.id === spotId);
           if (!found) {
             toast("点位不存在");
+            // 没认证过就弹认证，否则弹玩法
             if (!state.me.userInfo) checkAuth(); else showPlayGuide();
             return;
           }
@@ -1411,10 +1341,11 @@
             $("goSpot").onclick = () => showSpot(spotId);
           } else showSpot(spotId);
         } else {
+          // 关键修改：仅首次登录弹玩法，看完引导去认证
           if (!state.me.userInfo) {
             showPlayGuide();
           } else {
-            state.guideShown = true; 
+            state.guideShown = true; // 已认证过，直接跳过玩法
           }
         }
       } catch (err) { toast(err.message); }
