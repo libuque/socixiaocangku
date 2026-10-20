@@ -21,7 +21,7 @@
       color: var(--ink);
       font-family: "PingFang SC","Microsoft YaHei",sans-serif;
     }
-    button, input, textarea { font: inherit; }
+    button, input, textarea, select { font: inherit; }
     .hidden { display: none !important; pointer-events: none !important; }
     .toast {
       position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%);
@@ -290,14 +290,17 @@
       width: 32px; height: 32px; border-radius: 50%;
       background: rgba(23,50,77,.08); color: var(--ink);
     }
-    .campus-list, .done-list { display: grid; gap: 10px; }
+    
+    /* 居中列表样式 */
+    .campus-list { display: grid; gap: 10px; }
     .pick {
-      display: flex; gap: 10px; align-items: center;
-      background: #fff; border-radius: 16px; padding: 10px; border: 1px solid #eee; text-align: left; width: 100%;
+      display: flex; flex-direction: column; gap: 8px; align-items: center; justify-content: center;
+      background: #fff; border-radius: 16px; padding: 16px 10px; border: 1px solid #eee; text-align: center; width: 100%;
       cursor: pointer;
     }
     .pick.active { border-color: var(--btn-green); background: #f6fbf0; }
-    .pick img { width: 56px; height: 56px; object-fit: contain; background: transparent; }
+    .pick img { width: 64px; height: 64px; object-fit: contain; background: transparent; }
+    .pick b { font-size: 15px; color: var(--ink); margin-top: 4px; }
     
     .upload-area {
       width: 100%;
@@ -385,12 +388,26 @@
     .spot-title { text-align: center; margin: 10px 0 6px; }
     .spot-intro { text-align: center; margin-bottom: 8px; }
 
-    .form-group { margin-bottom: 12px; text-align: left; }
-    .form-group label { display: block; font-size: 13px; color: #6b7280; margin-bottom: 4px; margin-left: 4px; }
-    .form-group input { 
-      width: 100%; padding: 10px 14px; border-radius: 12px; border: 1px solid #e4d8c4; background: #fff;
+    /* 认证表单样式，全部居中 */
+    .form-group { margin-bottom: 16px; text-align: center; }
+    .form-group label { display: block; font-size: 14px; color: #6b7280; margin-bottom: 6px; font-weight: bold; }
+    .form-group input, .form-group select { 
+      width: 100%; 
+      padding: 12px 14px; 
+      border-radius: 12px; 
+      border: 1px solid #e4d8c4; 
+      background: #fff;
+      font-size: 15px;
+      text-align: center; /* 文字居中 */
+      text-align-last: center; /* 下拉框文字居中 */
+      appearance: none; /* 移除默认箭头 */
+      -webkit-appearance: none;
+      background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+      background-repeat: no-repeat;
+      background-position: right 1rem center;
+      background-size: 1em;
     }
-    .form-group input:focus { outline: none; border-color: var(--btn-green); }
+    .form-group input:focus, .form-group select:focus { outline: none; border-color: var(--btn-green); }
   </style>
 </head>
 <body>
@@ -671,12 +688,8 @@
       
       let selectedCampusId = state.me.campus ? state.me.campus.id : null;
       
-      const campusHtml = (state.boot.campuses || []).map((c) => `
-        <label class="pick ${selectedCampusId === c.id ? 'active' : ''}" data-id="${esc(c.id)}">
-          <input type="radio" name="authCampus" value="${esc(c.id)}" ${selectedCampusId === c.id ? 'checked' : ''} style="margin-right:8px;">
-          <img src="${esc(c.coverUrl)}" alt="${esc(c.name)}">
-          <div><b>${esc(c.name)}</b></div>
-        </label>
+      const campusOptions = (state.boot.campuses || []).map((c) => `
+        <option value="${esc(c.id)}" ${selectedCampusId === c.id ? 'selected' : ''}>${esc(c.name)}</option>
       `).join("");
 
       openSheet(`
@@ -691,31 +704,26 @@
         </div>
         <div class="form-group">
           <label>选择所在园区</label>
-          <div class="campus-list">${campusHtml}</div>
+          <select id="authCampus">
+            <option value="" disabled ${!selectedCampusId ? 'selected' : ''}>请选择园区</option>
+            ${campusOptions}
+          </select>
         </div>
         <div class="btn-row" style="margin-top:24px;">
           <button class="primary" id="btnDoAuth" style="width:100%;">认证捕手</button>
         </div>
       `);
 
-      $("panel").querySelectorAll(".pick").forEach(label => {
-        label.onclick = (e) => {
-          $("panel").querySelectorAll(".pick").forEach(l => l.classList.remove("active"));
-          label.classList.add("active");
-          label.querySelector("input").checked = true;
-        };
-      });
-
       $("btnDoAuth").onclick = () => {
         const name = $("authName").value.trim();
         const id = $("authId").value.trim();
-        const campusInput = $("panel").querySelector('input[name="authCampus"]:checked');
+        const campusId = $("authCampus").value;
         
         if (!name) return toast("请输入昵称");
         if (!id) return toast("请输入工号");
-        if (!campusInput) return toast("请选择园区");
+        if (!campusId) return toast("请选择园区");
 
-        const campus = (state.boot.campuses || []).find(c => c.id === campusInput.value);
+        const campus = (state.boot.campuses || []).find(c => c.id === campusId);
         
         state.me.userInfo = { name, id };
         state.me.campus = campus;
@@ -746,12 +754,12 @@
       const list = (state.boot.campuses || []).map((c) => `
         <button class="pick" data-id="${esc(c.id)}">
           <img src="${esc(c.coverUrl)}" alt="${esc(c.name)}">
-          <div><b>${esc(c.name)}</b><div class="hint">${esc(c.intro || "")}</div></div>
+          <b>${esc(c.name)}</b>
         </button>`).join("");
       openSheet(`
         <h3 style="text-align:center;margin-bottom:10px">选择园区</h3>
-        ${forceHint ? `<p class="hint">${esc(forceHint)}</p>` : ""}
-        <div class="campus-list">${list || '<p class="hint">暂无可选园区</p>'}</div>
+        ${forceHint ? `<p class="hint" style="text-align:center;">${esc(forceHint)}</p>` : ""}
+        <div class="campus-list">${list || '<p class="hint" style="text-align:center;">暂无可选园区</p>'}</div>
       `);
       $("panel").querySelectorAll(".pick").forEach((btn) => {
         btn.onclick = () => chooseCampus(btn.dataset.id);
@@ -765,7 +773,7 @@
       if (!force && state.me.campus && state.me.campus.id !== campusId && hasProgress) {
         openSheet(`
           <h3 style="text-align:center">切换园区？</h3>
-          <p class="hint">切换园区后，已完成的打卡记录仍保留在本机浏览器中。</p>
+          <p class="hint" style="text-align:center;">切换园区后，已完成的打卡记录仍保留在本机浏览器中。</p>
           <div class="btn-row">
             <button class="primary" id="forceSwitch">仍要切换</button>
           </div>
