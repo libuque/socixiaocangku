@@ -291,7 +291,6 @@
       background: rgba(23,50,77,.08); color: var(--ink);
     }
     
-    /* 居中列表样式 */
     .campus-list { display: grid; gap: 10px; }
     .pick {
       display: flex; flex-direction: column; gap: 8px; align-items: center; justify-content: center;
@@ -347,25 +346,50 @@
       align-items: center;
       justify-content: center;
     }
-    .image-save-tip {
-      margin-top: 15px;
-      text-align: center;
-      animation: fadeIn 0.5s ease;
+    
+    /* 新增：全屏保存图片遮罩层 */
+    .image-preview-layer {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.9);
+      z-index: 999;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
     }
-    .image-save-tip .tip-text {
-      color: #e53e3e;
-      font-size: 15px;
+    .image-preview-layer img {
+      max-width: 100%;
+      max-height: 70vh;
+      object-fit: contain;
+      border-radius: 8px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    }
+    .image-preview-layer .tip {
+      color: #fff;
+      font-size: 16px;
       font-weight: bold;
-      letter-spacing: 1px;
+      margin-top: 24px;
+      text-align: center;
+      line-height: 1.6;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.8);
     }
-    .image-save-tip .sub-tip {
+    .image-preview-layer .sub-tip {
       color: #a0aec0;
       font-size: 12px;
-      margin-top: 4px;
+      margin-top: 8px;
+      text-align: center;
     }
-    @keyframes fadeIn {
-      from { opacity: 0; }
-      to { opacity: 1; }
+    .image-preview-layer .close-btn {
+      margin-top: 20px;
+      background: #fff;
+      color: #17324d;
+      border-radius: 999px;
+      padding: 10px 30px;
+      font-size: 15px;
+      font-weight: bold;
+      border: 0;
     }
 
     .type-pop { text-align: center; padding: 6px 8px 14px; }
@@ -388,10 +412,10 @@
     .spot-title { text-align: center; margin: 10px 0 6px; }
     .spot-intro { text-align: center; margin-bottom: 8px; }
 
-    /* 认证表单样式，全部居中 */
+    /* 认证表单样式，去除了全局下拉箭头影响 */
     .form-group { margin-bottom: 16px; text-align: center; }
     .form-group label { display: block; font-size: 14px; color: #6b7280; margin-bottom: 6px; font-weight: bold; }
-    .form-group input, .form-group select { 
+    .form-group input { 
       width: 100%; 
       padding: 12px 14px; 
       border-radius: 12px; 
@@ -399,8 +423,18 @@
       background: #fff;
       font-size: 15px;
       text-align: center; /* 文字居中 */
-      text-align-last: center; /* 下拉框文字居中 */
-      appearance: none; /* 移除默认箭头 */
+    }
+    /* 单独为 select 设置下拉箭头 */
+    .form-group select {
+      width: 100%; 
+      padding: 12px 14px; 
+      border-radius: 12px; 
+      border: 1px solid #e4d8c4; 
+      background: #fff;
+      font-size: 15px;
+      text-align: center;
+      text-align-last: center;
+      appearance: none;
       -webkit-appearance: none;
       background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
       background-repeat: no-repeat;
@@ -421,7 +455,6 @@
   </section>
 
   <main id="app">
-    <!-- 用户标签 -->
     <div id="userBadge" class="user-badge hidden"></div>
 
     <header class="hero lay" id="layTitle"><img id="titleImg" alt="活动主题" /></header>
@@ -446,6 +479,14 @@
       <button class="icon-btn" id="sheetClose" type="button" aria-label="关闭">×</button>
       <div class="panel-body" id="panel"></div>
     </div>
+  </div>
+
+  <!-- 全屏保存预览层 -->
+  <div id="imagePreviewLayer" class="image-preview-layer hidden">
+    <img id="imagePreviewImg" src="" alt="长按保存">
+    <div class="tip">请长按上方图片保存</div>
+    <div class="sub-tip">电脑端请右键点击图片选择「图片另存为」</div>
+    <button class="close-btn" id="closeImagePreview" type="button">返回票根</button>
   </div>
 
   <canvas id="ticketCanvas" class="hidden"></canvas>
@@ -682,7 +723,6 @@
       saveMe();
     }
 
-    // 检查并弹出首次登录认证
     function checkAuth() {
       if (state.me.userInfo && state.me.campus) return false;
       
@@ -733,7 +773,7 @@
         toast("认证成功，开启捕手之旅");
       };
       
-      return true; // 弹出了认证
+      return true; 
     }
 
     function showPlayGuide() {
@@ -746,7 +786,7 @@
       `);
       $("guideOk").onclick = () => {
         closeSheet();
-        checkAuth(); // 看完玩法强制认证
+        checkAuth(); 
       };
     }
 
@@ -759,611 +799,4 @@
       openSheet(`
         <h3 style="text-align:center;margin-bottom:10px">选择园区</h3>
         ${forceHint ? `<p class="hint" style="text-align:center;">${esc(forceHint)}</p>` : ""}
-        <div class="campus-list">${list || '<p class="hint" style="text-align:center;">暂无可选园区</p>'}</div>
-      `);
-      $("panel").querySelectorAll(".pick").forEach((btn) => {
-        btn.onclick = () => chooseCampus(btn.dataset.id);
-      });
-    }
-
-    async function chooseCampus(campusId, force) {
-      const campus = (state.boot.campuses || []).find((c) => c.id === campusId);
-      if (!campus) { toast("园区不存在"); return; }
-      const hasProgress = (state.me.completedSpots || []).length > 0;
-      if (!force && state.me.campus && state.me.campus.id !== campusId && hasProgress) {
-        openSheet(`
-          <h3 style="text-align:center">切换园区？</h3>
-          <p class="hint" style="text-align:center;">切换园区后，已完成的打卡记录仍保留在本机浏览器中。</p>
-          <div class="btn-row">
-            <button class="primary" id="forceSwitch">仍要切换</button>
-          </div>
-        `);
-        $("forceSwitch").onclick = () => chooseCampus(campusId, true);
-        return;
-      }
-      state.me.campus = campus;
-      saveMe();
-      closeSheet();
-      renderHome();
-    }
-
-    function spotById(id) {
-      const all = [...((state.me && state.me.pendingSpots) || []), ...((state.me && state.me.completedSpots) || []).map((r) => r.spot)];
-      return all.find((s) => s.id === id);
-    }
-
-    function showSpot(id) {
-      const spot = spotById(id) || state.pendingSpot;
-      if (!spot) return;
-      const campusId = state.me.campus && state.me.campus.id;
-      const mismatch = campusId && !inCampus(spot, campusId);
-      
-      const existingRec = (state.me.completedSpots || []).find(r => r.spotId === id);
-      const oldPhoto = existingRec ? existingRec.photoUrl : "";
-      const oldNote = existingRec ? existingRec.note : "";
-
-      openSheet(`
-        <img class="spot-visual" src="${esc(spot.detailImageUrl)}" alt="${esc(spot.name)}">
-        <h3 class="spot-title">${esc(spot.name)}</h3>
-        <p class="hint spot-intro">${esc(spot.intro || "")}</p>
-        ${mismatch ? `<p class="hint" style="text-align:center">该点位未包含当前园区标签，提交前请确认。</p>` : ""}
-        
-        <div class="upload-area" id="uploadArea">
-          <span id="uploadText" class="${oldPhoto ? 'hidden' : ''}">上传捕捉到的美好</span>
-          <img id="uploadPreview" class="${oldPhoto ? '' : 'hidden'}" src="${esc(oldPhoto)}" alt="预览">
-          <input id="photo" type="file" accept="image/jpeg,image/png,image/webp" capture="environment" style="display:none;">
-        </div>
-        <div class="reupload-tip ${oldPhoto ? '' : 'hidden'}" id="reuploadTip">点击重新上传美好记录</div>
-
-        <textarea id="note" maxlength="10" placeholder="写点什么... (10字以内)">${esc(oldNote)}</textarea>
-        <div class="btn-row" style="justify-content:center;"><button class="primary" id="submitCheckin">提交打卡</button></div>
-      `);
-
-      const uploadArea = $("uploadArea");
-      const photoInput = $("photo");
-      const previewImg = $("uploadPreview");
-      const uploadText = $("uploadText");
-      const reuploadTip = $("reuploadTip");
-
-      uploadArea.onclick = () => photoInput.click();
-      photoInput.onchange = (e) => {
-        const file = e.target.files[0];
-        if (file) {
-          const reader = new FileReader();
-          reader.onload = (ev) => {
-            previewImg.src = ev.target.result;
-            previewImg.classList.remove("hidden");
-            uploadText.classList.add("hidden");
-            reuploadTip.classList.remove("hidden");
-          };
-          reader.readAsDataURL(file);
-        }
-      };
-
-      $("submitCheckin").onclick = () => submitCheckin(spot);
-    }
-
-    async function submitCheckin(spot) {
-      const file = $("photo").files[0];
-      const note = $("note").value;
-      const existingRec = (state.me.completedSpots || []).find(r => r.spotId === spot.id);
-      
-      if (!file && !existingRec) return toast("请先点击虚线框上传照片");
-      
-      if (state.me.campus && !inCampus(spot, state.me.campus.id)) {
-        openSheet(`
-          <h3 style="text-align:center">园区不一致</h3>
-          <p class="hint">当前选择是 ${esc(state.me.campus.name)}，该点位未配置此园区标签。</p>
-          <div class="btn-row"><button class="primary" id="fixCampus">查看点位可去园区</button></div>
-        `);
-        $("fixCampus").onclick = () => showCampusPicker();
-        return;
-      }
-      $("submitCheckin").disabled = true;
-      $("submitCheckin").textContent = "处理中…";
-      try {
-        let dataUrl = existingRec ? existingRec.photoUrl : "";
-        if (file) {
-          dataUrl = await compressImage(file, 1000, 0.72);
-        }
-        
-        const rec = {
-          id: "rec-" + Date.now() + "-" + Math.random().toString(36).slice(2, 8),
-          spotId: spot.id,
-          spot: spot,
-          photoUrl: dataUrl,
-          note: note || "",
-          createdAt: Date.now(),
-        };
-        
-        const list = (state.me.completedSpots || []).filter((r) => r.spotId !== spot.id);
-        list.push(rec);
-        state.me.completedSpots = list;
-        
-        recalcProgress();
-        saveMe();
-        closeSheet();
-        renderHome();
-        toast("打卡信息已更新");
-      } catch (err) {
-        toast("照片处理失败：" + err.message);
-        $("submitCheckin").disabled = false;
-        $("submitCheckin").textContent = "失败，点此重试";
-      }
-    }
-
-    function showSociSlot() {
-      const has = state.me && state.me.sociPhotoUrl;
-      openSheet(`
-        <h3 style="text-align:center">我的照片 / SOCI</h3>
-        <p class="hint" style="text-align:center">${esc(state.boot.activity.sociMeaning)}</p>
-        
-        <div class="upload-area" id="uploadAreaSoci">
-          <span id="uploadTextSoci" class="${has ? 'hidden' : ''}">上传与 SOCI 的合照</span>
-          <img id="uploadPreviewSoci" class="${has ? '' : 'hidden'}" src="${esc(state.me.sociPhotoUrl || '')}" alt="预览">
-          <input id="sociFile" type="file" accept="image/jpeg,image/png,image/webp" capture="environment" style="display:none;">
-        </div>
-        <div class="reupload-tip ${has ? '' : 'hidden'}" id="reuploadTipSoci">点击重新上传美好记录</div>
-        
-        <textarea id="sociNote" maxlength="10" placeholder="写点什么... (10字以内)">${esc(state.me.sociNote || "")}</textarea>
-        <div class="btn-row"><button class="primary" id="submitSoci">${has ? "确认替换" : "上传照片"}</button></div>
-      `);
-
-      const uploadArea = $("uploadAreaSoci");
-      const photoInput = $("sociFile");
-      const previewImg = $("uploadPreviewSoci");
-      const uploadText = $("uploadTextSoci");
-      const reuploadTip = $("reuploadTipSoci");
-
-      uploadArea.onclick = () => photoInput.click();
-      photoInput.onchange = (e) => {
-        const file = e.target.files[0];
-        if (file) {
-          const reader = new FileReader();
-          reader.onload = (ev) => {
-            previewImg.src = ev.target.result;
-            previewImg.classList.remove("hidden");
-            uploadText.classList.add("hidden");
-            reuploadTip.classList.remove("hidden");
-          };
-          reader.readAsDataURL(file);
-        }
-      };
-
-      $("submitSoci").onclick = submitSoci;
-    }
-
-    async function submitSoci() {
-      const file = $("sociFile").files[0];
-      const note = $("sociNote").value;
-      if (!file && !state.me.sociPhotoUrl) return toast("请先选择照片");
-      
-      if (!file && state.me.sociPhotoUrl) {
-        state.me.sociNote = note;
-        saveMe();
-        closeSheet();
-        return;
-      }
-
-      $("submitSoci").disabled = true;
-      $("submitSoci").textContent = "处理中…";
-      try {
-        const dataUrl = await compressImage(file, 1000, 0.72);
-        state.me.sociPhotoUrl = dataUrl;
-        state.me.sociNote = note;
-        saveMe();
-        closeSheet();
-        renderHome();
-        toast("已保存到第 4 格");
-      } catch (err) {
-        toast("照片处理失败：" + err.message);
-        $("submitSoci").disabled = false;
-        $("submitSoci").textContent = "失败，点此重试";
-      }
-    }
-
-    function openTicketFlow() {
-      if (!state.me || !state.me.progress || !state.me.progress.unlocked) {
-        toast("完成任意 3 项打卡后可生成票根");
-        return;
-      }
-      if (!state.me.sociPhotoUrl) {
-        toast("请先上传与 Soci 的合照");
-        showSociSlot();
-        return;
-      }
-      composeFromGrids();
-    }
-
-    function matchTypeRule(latest, typeRules) {
-      const rules = Array.isArray(typeRules) ? typeRules : [];
-      const keywords = new Set();
-      (latest || []).forEach((r) => {
-        (r.spot && r.spot.keywords || []).forEach((k) => keywords.add(k));
-      });
-      let best = null, bestScore = 0;
-      rules.forEach((rule) => {
-        if (rule.isDefault) return;
-        const hits = (rule.keywords || []).filter((k) => keywords.has(k)).length;
-        if (hits > bestScore) { bestScore = hits; best = rule; }
-      });
-      if (best) return { name: best.name, description: best.description };
-      const fallback = rules.find((r) => r.isDefault);
-      if (fallback) return { name: fallback.name, description: fallback.description };
-      return { name: "美好捕手", description: "活动趣味结果，非正式测评" };
-    }
-
-    async function composeFromGrids() {
-      const latest = ((state.me.progress && state.me.progress.latest) || []).slice(0, 3);
-      const photos = latest.map((r) => r.photoUrl);
-      const notes = latest.map((r) => r.note || "");
-      
-      if (state.me.sociPhotoUrl) {
-        photos.push(state.me.sociPhotoUrl);
-        notes.push(state.me.sociNote || "");
-      }
-      
-      const template = state.boot.ticketTemplate || {};
-      $("btnTicket").disabled = true;
-      $("btnTicket").textContent = "生成中…";
-      try {
-        showTypeAndTicket({
-          template: template,
-          ticket: { photos, notes },
-          typeResult: matchTypeRule(latest, state.boot.typeRules),
-          activity: state.boot.activity,
-        });
-      } catch (err) {
-        toast(err.message || "生成失败");
-      } finally {
-        $("btnTicket").disabled = false;
-        $("btnTicket").textContent = "生成票根";
-      }
-    }
-
-    function composeTicketCanvas({ activity, template, photos, notes, showNotes, canvas }) {
-      return new Promise(async (resolve, reject) => {
-        try {
-          const W = Number(template.width) || 1200;
-          const H = Number(template.height) || 1800;
-          canvas.width = W;
-          canvas.height = H;
-          const ctx = canvas.getContext("2d");
-          ctx.fillStyle = "#f3e6cf";
-          ctx.fillRect(0, 0, W, H);
-
-          const loadImage = (src) => new Promise((res, rej) => {
-            const img = new Image();
-            if (!/^data:/.test(src)) img.crossOrigin = "anonymous";
-            img.onload = () => res(img);
-            img.onerror = () => {
-              if (!/^data:/.test(src) && !src.includes('wsrv.nl')) {
-                const proxySrc = `https://wsrv.nl/?url=${encodeURIComponent(src)}`;
-                const img2 = new Image();
-                img2.crossOrigin = "anonymous";
-                img2.onload = () => res(img2);
-                img2.onerror = () => rej(new Error("图片加载失败"));
-                img2.src = proxySrc;
-              } else {
-                rej(new Error("图片加载失败"));
-              }
-            };
-            img.src = src;
-          });
-
-          const drawCover = (img, x, y, w, h, radius) => {
-            ctx.save();
-            const r = Math.min(radius || 0, w / 2, h / 2);
-            ctx.beginPath();
-            ctx.moveTo(x + r, y);
-            ctx.arcTo(x + w, y, x + w, y + h, r);
-            ctx.arcTo(x + w, y + h, x, y + h, r);
-            ctx.arcTo(x, y + h, x, y, r);
-            ctx.arcTo(x, y, x + w, y, r);
-            ctx.closePath();
-            ctx.clip();
-            const scale = Math.max(w / img.width, h / img.height);
-            const dw = img.width * scale;
-            const dh = img.height * scale;
-            ctx.drawImage(img, x + (w - dw) / 2, y + (h - dh) / 2, dw, dh);
-            ctx.restore();
-          };
-
-          const drawTextNote = (text, i, s) => {
-            if (!showNotes || !text) return;
-            
-            const fontSize = Math.round(W / 45); 
-            const margin = Math.round(W / 35);   
-
-            ctx.font = `italic 500 ${fontSize}px "Source Han Sans SC", "Noto Sans SC", "PingFang SC", sans-serif`;
-            
-            const displayText = `“${text}”`;
-            const metrics = ctx.measureText(displayText);
-            const textWidth = metrics.width;
-            const textHeight = fontSize; 
-            
-            let textX, textY;
-            
-            if (i === 0) { 
-              textX = s.x + s.w - textWidth - margin;
-              textY = s.y + s.h - margin;
-            } else if (i === 1) { 
-              textX = s.x + margin;
-              textY = s.y + s.h - margin;
-            } else if (i === 2) { 
-              textX = s.x + s.w - textWidth - margin;
-              textY = s.y + margin + textHeight;
-            } else { 
-              textX = s.x + margin;
-              textY = s.y + margin + textHeight;
-            }
-
-            ctx.save();
-            ctx.fillStyle = "#ffffff";
-            ctx.textBaseline = "bottom";
-            ctx.shadowColor = "rgba(0,0,0,0.8)";
-            ctx.shadowBlur = 6;
-            ctx.shadowOffsetX = 2;
-            ctx.shadowOffsetY = 2;
-            ctx.fillText(displayText, textX, textY);
-            ctx.restore();
-          };
-
-          // 新增：画底部居中的昵称
-          const drawNickname = () => {
-            if (!showNotes || !state.me.userInfo || !state.me.userInfo.name) return;
-            const fontSize = Math.round(W / 45); 
-            const margin = Math.round(W / 30); // 距离底边的边距
-
-            ctx.font = `italic 500 ${fontSize}px "Source Han Sans SC", "Noto Sans SC", "PingFang SC", sans-serif`;
-            
-            const displayText = `@${state.me.userInfo.name}`;
-            const metrics = ctx.measureText(displayText);
-            const textWidth = metrics.width;
-            
-            const textX = (W - textWidth) / 2;
-            const textY = H - margin;
-
-            ctx.save();
-            ctx.fillStyle = "#ffffff";
-            ctx.textBaseline = "bottom";
-            ctx.shadowColor = "rgba(0,0,0,0.8)";
-            ctx.shadowBlur = 6;
-            ctx.shadowOffsetX = 2;
-            ctx.shadowOffsetY = 2;
-            ctx.fillText(displayText, textX, textY);
-            ctx.restore();
-          };
-
-          const slots = Array.isArray(template.slots) ? template.slots : [];
-          
-          for (let i = 0; i < slots.length; i++) {
-            const s = slots[i];
-            if (!photos[i]) continue;
-            try {
-              const img = await loadImage(photos[i]);
-              drawCover(img, s.x, s.y, s.w, s.h, s.radius || 12);
-              drawTextNote(notes[i], i, s);
-            } catch (e) { console.warn("照片加载失败", e); }
-          }
-
-          const frameUrl = template.frameImageUrl || template.imageUrl;
-          if (frameUrl && !/placehold\.co/i.test(frameUrl)) {
-            try {
-              const frame = await loadImage(frameUrl);
-              ctx.drawImage(frame, 0, 0, W, H);
-            } catch (e) {
-              console.warn("外框图加载失败", e);
-            }
-          }
-
-          drawNickname(); // 外框之上画昵称
-
-          try {
-            const dataUrl = canvas.toDataURL("image/png");
-            resolve({ url: dataUrl, degraded: false });
-          } catch (e) {
-            if (e.name === 'SecurityError' || e.message.includes('tainted')) {
-              canvas.width = W;
-              canvas.height = H;
-              const ctx2 = canvas.getContext("2d");
-              ctx2.fillStyle = "#f3e6cf";
-              ctx2.fillRect(0, 0, W, H);
-
-              for (let i = 0; i < slots.length; i++) {
-                const s = slots[i];
-                if (!photos[i]) continue;
-                try {
-                  const img = await loadImage(photos[i]);
-                  drawCover(img, s.x, s.y, s.w, s.h, s.radius || 12);
-                  drawTextNote(notes[i], i, s);
-                } catch (err) {}
-              }
-              drawNickname();
-              const dataUrl = canvas.toDataURL("image/png");
-              resolve({ url: dataUrl, degraded: true });
-            } else {
-              reject(new Error("导出图片失败，请截图保存"));
-            }
-          }
-        } catch (err) {
-          reject(err);
-        }
-      });
-    }
-
-    async function showTypeAndTicket(data) {
-      const template = data.template || state.boot.ticketTemplate || {};
-      const typeName = (data.typeResult && data.typeResult.name) || "";
-      const typeDesc = (data.typeResult && data.typeResult.description) || "";
-      
-      openSheet(`
-        <div class="type-pop">
-          <p class="hint">活动趣味结果，非正式测评</p>
-          <h3>${esc(typeName)}</h3>
-          <p class="hint">${esc(typeDesc)}</p>
-        </div>
-        
-        <div class="ticket-preview-container" id="ticketPreviewArea">
-          <p class="hint">正在生成高清票根...</p>
-        </div>
-        
-        <p class="hint" style="margin-top:12px; text-align:center;">${esc(data.activity.prizeHint)}</p>
-        
-        <div class="btn-row">
-          <label class="hint">
-            <input type="checkbox" id="toggleNotes" ${state.showNotesInTicket ? 'checked' : ''}> 
-            <span>显示文字</span>
-          </label>
-          <button class="ghost" id="closeTicket">关闭</button>
-        </div>
-        
-        <div class="image-save-tip hidden" id="saveTip">
-          <div class="tip-text">请长按上方图片保存</div>
-          <div class="sub-tip">电脑端请右键选择「图片另存为」</div>
-        </div>
-      `);
-
-      const updateCanvasAndRender = async () => {
-        $("ticketPreviewArea").innerHTML = '<p class="hint">正在生成高清票根...</p>';
-        $("saveTip").classList.add("hidden");
-        
-        try {
-          const res = await composeTicketCanvas({
-            activity: data.activity,
-            template,
-            photos: data.ticket.photos,
-            notes: data.ticket.notes,
-            showNotes: state.showNotesInTicket,
-            canvas: $("ticketCanvas"),
-          });
-          
-          $("ticketPreviewArea").innerHTML = `<img src="${res.url}" style="width:100%; border-radius:12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);" alt="票根">`;
-          $("saveTip").classList.remove("hidden");
-          
-          if (res.degraded) {
-            toast("由于外框图跨域限制，已生成不带外框的图片。");
-          }
-        } catch (err) {
-          $("ticketPreviewArea").innerHTML = '<p class="hint" style="color:red">生成失败，请重试</p>';
-          toast(err.message || "导出失败");
-        }
-      };
-
-      updateCanvasAndRender();
-
-      $("toggleNotes").onchange = (e) => {
-        state.showNotesInTicket = e.target.checked;
-        updateCanvasAndRender();
-      };
-      
-      $("closeTicket").onclick = closeSheet;
-    }
-
-    async function boot() {
-      // 测试神器：如果链接带有 ?reset=1，则清空当前本地数据
-      const params = new URLSearchParams(location.search);
-      if (params.get("reset") === "1") {
-        localStorage.removeItem("nh_employee_id");
-        for (let i = localStorage.length - 1; i >= 0; i--) {
-          const key = localStorage.key(i);
-          if (key && key.startsWith("nh_me_")) localStorage.removeItem(key);
-        }
-        toast("已重置所有记录");
-        // 将地址栏的 ?reset=1 去掉，防止一直刷新
-        const newParams = new URLSearchParams(location.search);
-        newParams.delete("reset");
-        const newSearch = newParams.toString() ? "?" + newParams.toString() : "";
-        window.history.replaceState(null, "", location.pathname + newSearch);
-      }
-
-      try {
-        state.boot = window.BOOT_CONFIG || EMBEDDED_BOOT;
-        if (!state.boot || !state.boot.activity) throw new Error("配置缺失");
-      } catch (err) {
-        toast(err.message);
-        return;
-      }
-
-      const spotId = params.get("spot");
-      if (spotId) {
-        $("intro").classList.add("hidden");
-        $("app").classList.remove("hidden");
-        enterApp();
-        return;
-      }
-
-      $("intro").classList.remove("hidden");
-      $("app").classList.add("hidden");
-      const video = $("introVideo");
-      const url = state.boot.activity.introVideoUrl;
-      if (url) {
-        video.src = url;
-        video.muted = true;
-        video.loop = false;
-        const play = video.play();
-        if (play && play.catch) play.catch(() => $("introFallback").classList.remove("hidden"));
-        video.onended = () => enterApp();
-        video.onerror = () => $("introFallback").classList.remove("hidden");
-      } else {
-        $("introFallback").classList.remove("hidden");
-      }
-      $("skipIntro").onclick = enterApp;
-    }
-
-    async function enterApp() {
-      if (state.entered) return;
-      state.entered = true;
-      const video = $("introVideo");
-      if (video) {
-        video.onended = null;
-        video.pause();
-      }
-      $("intro").classList.add("hidden");
-      $("app").classList.remove("hidden");
-      try {
-        await ensureId();
-        renderHome();
-        const params = new URLSearchParams(location.search);
-        const spotId = params.get("spot");
-        
-        if (spotId) {
-          const found = (state.boot.spots || []).find((s) => s.id === spotId);
-          if (!found) {
-            toast("点位不存在");
-            // 没认证过就弹认证，否则弹玩法
-            if (!state.me.userInfo) checkAuth(); else showPlayGuide();
-            return;
-          }
-          state.pendingSpot = found;
-          if (state.me.campus && !inCampus(found, state.me.campus.id)) {
-            openSheet(`<h3 style="text-align:center">园区不一致</h3><p class="hint">扫码点位未包含当前园区标签。</p><div class="btn-row"><button class="primary" id="goSpot">查看点位</button></div>`);
-            $("goSpot").onclick = () => showSpot(spotId);
-          } else showSpot(spotId);
-        } else {
-          // 关键修改：仅首次登录弹玩法，看完引导去认证
-          if (!state.me.userInfo) {
-            showPlayGuide();
-          } else {
-            state.guideShown = true; // 已认证过，直接跳过玩法
-          }
-        }
-      } catch (err) { toast(err.message); }
-    }
-
-    $("btnCampus").onclick = () => {
-      if (!state.me.userInfo) {
-        toast("请先认证捕手");
-        checkAuth();
-        return;
-      }
-      showCampusPicker();
-    };
-    
-    $("btnTicket").onclick = openTicketFlow;
-    $("sheetClose").onclick = closeSheet;
-    $("sheet").onclick = (e) => { if (e.target.id === "sheet") closeSheet(); };
-    boot();
-  </script>
-</body>
-</html>
+        <div class="campus-list">${list || '<p class="hint" style="text-align:center
