@@ -291,6 +291,7 @@
       background: rgba(23,50,77,.08); color: var(--ink);
     }
     
+    /* 列表样式，去掉了图片 */
     .campus-list { display: grid; gap: 10px; }
     .pick {
       display: flex; flex-direction: column; gap: 8px; align-items: center; justify-content: center;
@@ -298,8 +299,7 @@
       cursor: pointer;
     }
     .pick.active { border-color: var(--btn-green); background: #f6fbf0; }
-    .pick img { width: 64px; height: 64px; object-fit: contain; background: transparent; }
-    .pick b { font-size: 15px; color: var(--ink); margin-top: 4px; }
+    .pick b { font-size: 16px; color: var(--ink); }
     
     .upload-area {
       width: 100%;
@@ -519,13 +519,11 @@
       } catch (e) {}
     }
 
-    // 核心：计算进度时，只统计当前园区内的打卡记录
     function recalcProgress() {
       if (!state.me) return;
       const required = (state.boot && state.boot.rules && state.boot.rules.requiredSpotCount) || 3;
       
       const currentCampusId = state.me.campus ? state.me.campus.id : null;
-      // 过滤出属于当前园区的打卡记录
       const validSpots = (state.me.completedSpots || []).filter(r => {
         if (!currentCampusId) return true;
         const ids = r.spot.campusIds && r.spot.campusIds.length ? r.spot.campusIds : (r.spot.campusId ? [r.spot.campusId] : []);
@@ -668,7 +666,7 @@
       $("titleImg").src = boot.activity.titleImageUrl;
       document.body.style.background = `url('${boot.activity.backgroundUrl}') center/cover no-repeat fixed`;
       
-      recalcProgress(); // 切换园区时重新计算属于该园区的进度
+      recalcProgress(); 
 
       applyLayout();
       const campus = state.me && state.me.campus;
@@ -799,9 +797,9 @@
     }
 
     function showCampusPicker(forceHint) {
+      // 去掉了图片标签
       const list = (state.boot.campuses || []).map((c) => `
         <button class="pick" data-id="${esc(c.id)}">
-          <img src="${esc(c.coverUrl)}" alt="${esc(c.name)}">
           <b>${esc(c.name)}</b>
         </button>`).join("");
       openSheet(`
@@ -818,7 +816,6 @@
       const campus = (state.boot.campuses || []).find((c) => c.id === campusId);
       if (!campus) { toast("园区不存在"); return; }
       
-      // 切换逻辑修改：即使当前园区有打卡进度，只要切换到不同园区，提示内容改为仅作通知，不阻碍切换
       if (!force && state.me.campus && state.me.campus.id !== campusId && state.me.progress.completed > 0) {
         openSheet(`
           <h3 style="text-align:center">切换园区？</h3>
@@ -1302,7 +1299,6 @@
         updateCanvasAndRender();
       };
 
-      // 点击保存图片，弹出全屏遮罩层
       $("openSaveLayerBtn").onclick = () => {
         if (!currentDataUrl) return toast("图片正在生成中，请稍候");
         $("imagePreviewImg").src = currentDataUrl;
