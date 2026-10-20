@@ -2,8 +2,8 @@ name: Sync Issues to Google Sheets
 
 on:
   schedule:
-    - cron: '*/15 * * * *' # 每 15 分钟自动运行一次（最低频率）
-  workflow_dispatch: # 允许你手动点击运行测试
+    - cron: '*/15 * * * *' # 每 15 分钟自动运行一次
+  workflow_dispatch: # 允许手动点击运行
 
 jobs:
   sync:
@@ -12,17 +12,8 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: '18'
-
-      - name: Install Dependencies
-        run: npm install @octokit/rest
-
-      - name: Run sync script
+      - name: Run bash sync script
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GOOGLE_SCRIPT_URL: ${{ secrets.GOOGLE_SCRIPT_URL }}
           GITHUB_REPOSITORY: ${{ github.repository }}
-        run: node sync.js
+        run: bash sync.sh
