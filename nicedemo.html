@@ -51,7 +51,6 @@
       z-index: 51;
     }
     
-    /* 按钮新样式 */
     .primary, .ghost, .chip, .icon-btn { border: 0; cursor: pointer; }
     .primary, .ghost { 
       border-radius: 999px; 
@@ -345,8 +344,8 @@
       align-items: center;
       justify-content: center;
     }
-    
-    /* 全屏保存预览层 */
+
+    /* 保存图片的全屏浮层 */
     .image-preview-layer {
       position: fixed;
       inset: 0;
@@ -360,11 +359,13 @@
     }
     .image-preview-layer img {
       max-width: 100%;
-      max-height: 75vh;
+      max-height: 65vh;
       object-fit: contain;
       border-radius: 8px;
       box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-      -webkit-touch-callout: default; /* 允许长按 */
+      /* 关键属性：解除 iOS 长按限制 */
+      -webkit-touch-callout: default; 
+      user-select: auto;
     }
     .image-preview-layer .tip {
       color: #fff;
@@ -372,7 +373,6 @@
       font-weight: bold;
       margin-top: 20px;
       text-align: center;
-      line-height: 1.6;
       text-shadow: 0 1px 2px rgba(0,0,0,0.8);
     }
     .image-preview-layer .sub-tip {
@@ -381,15 +381,34 @@
       margin-top: 8px;
       text-align: center;
     }
-    .image-preview-layer .close-btn {
-      margin-top: 16px;
-      background: #fff;
-      color: #17324d;
+    .image-preview-layer .btn-group {
+      margin-top: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      width: 100%;
+      max-width: 280px;
+    }
+    .image-preview-layer .download-btn {
+      background: var(--btn-green);
+      color: #fff;
       border-radius: 999px;
-      padding: 10px 30px;
-      font-size: 15px;
+      padding: 12px;
+      font-size: 16px;
       font-weight: bold;
       border: 0;
+      cursor: pointer;
+      text-align: center;
+      text-decoration: none;
+    }
+    .image-preview-layer .close-btn {
+      background: transparent;
+      color: #fff;
+      border-radius: 999px;
+      padding: 12px;
+      font-size: 15px;
+      border: 1px solid rgba(255,255,255,0.3);
+      cursor: pointer;
     }
 
     .type-pop { text-align: center; padding: 6px 8px 14px; }
@@ -479,11 +498,17 @@
     </div>
   </div>
 
+  <!-- 修复后的全屏保存浮层 -->
   <div id="imagePreviewLayer" class="image-preview-layer hidden">
     <img id="imagePreviewImg" src="" alt="长按保存">
-    <div class="tip">请长按上方图片保存</div>
-    <div class="sub-tip">电脑端请右键点击图片选择「图片另存为」</div>
-    <button class="close-btn" id="closeImagePreview" type="button">返回票根</button>
+    
+    <div class="tip">手机端请长按上方图片保存</div>
+    <div class="sub-tip">如果长按无效，请点击下方下载按钮</div>
+    
+    <div class="btn-group">
+      <a id="downloadBtn" class="download-btn" download="nicehunt-ticket.png">保存图片到本地</a>
+      <button class="close-btn" id="closeImagePreview" type="button">返回活动</button>
+    </div>
   </div>
 
   <canvas id="ticketCanvas" class="hidden"></canvas>
@@ -1242,11 +1267,9 @@
       const typeName = (data.typeResult && data.typeResult.name) || "";
       const typeDesc = (data.typeResult && data.typeResult.description) || "";
       
-      // 1. 先弹出一个提示
       toast("正在生成高清票根...");
 
       try {
-        // 2. 直接生成 Base64 图片
         const res = await composeTicketCanvas({
           activity: data.activity,
           template,
@@ -1256,8 +1279,9 @@
           canvas: $("ticketCanvas"),
         });
 
-        // 3. 直接将图片塞入全屏遮罩层，一步到位展示出来
+        // 将Base64图片同时赋给展示图和下载链接
         $("imagePreviewImg").src = res.url;
+        $("downloadBtn").href = res.url;
         $("imagePreviewLayer").classList.remove("hidden");
 
         if (res.degraded) {
