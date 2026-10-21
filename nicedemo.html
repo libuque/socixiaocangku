@@ -291,7 +291,6 @@
       background: rgba(23,50,77,.08); color: var(--ink);
     }
     
-    /* 列表样式，去掉了图片 */
     .campus-list { display: grid; gap: 10px; }
     .pick {
       display: flex; flex-direction: column; gap: 8px; align-items: center; justify-content: center;
@@ -347,10 +346,11 @@
       justify-content: center;
     }
     
+    /* 全屏保存预览层 */
     .image-preview-layer {
       position: fixed;
       inset: 0;
-      background: rgba(0, 0, 0, 0.9);
+      background: rgba(0, 0, 0, 0.95);
       z-index: 999;
       display: flex;
       flex-direction: column;
@@ -360,16 +360,17 @@
     }
     .image-preview-layer img {
       max-width: 100%;
-      max-height: 70vh;
+      max-height: 75vh;
       object-fit: contain;
       border-radius: 8px;
       box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+      -webkit-touch-callout: default; /* 允许长按 */
     }
     .image-preview-layer .tip {
       color: #fff;
       font-size: 16px;
       font-weight: bold;
-      margin-top: 24px;
+      margin-top: 20px;
       text-align: center;
       line-height: 1.6;
       text-shadow: 0 1px 2px rgba(0,0,0,0.8);
@@ -381,7 +382,7 @@
       text-align: center;
     }
     .image-preview-layer .close-btn {
-      margin-top: 20px;
+      margin-top: 16px;
       background: #fff;
       color: #17324d;
       border-radius: 999px;
@@ -797,7 +798,6 @@
     }
 
     function showCampusPicker(forceHint) {
-      // 去掉了图片标签
       const list = (state.boot.campuses || []).map((c) => `
         <button class="pick" data-id="${esc(c.id)}">
           <b>${esc(c.name)}</b>
@@ -1242,70 +1242,30 @@
       const typeName = (data.typeResult && data.typeResult.name) || "";
       const typeDesc = (data.typeResult && data.typeResult.description) || "";
       
-      openSheet(`
-        <div class="type-pop">
-          <p class="hint">活动趣味结果，非正式测评</p>
-          <h3>${esc(typeName)}</h3>
-          <p class="hint">${esc(typeDesc)}</p>
-        </div>
-        
-        <div class="ticket-preview-container" id="ticketPreviewArea">
-          <p class="hint">正在生成高清票根...</p>
-        </div>
-        
-        <p class="hint" style="margin-top:12px; text-align:center;">${esc(data.activity.prizeHint)}</p>
-        
-        <div class="btn-row">
-          <label class="hint">
-            <input type="checkbox" id="toggleNotes" ${state.showNotesInTicket ? 'checked' : ''}> 
-            <span>显示文字</span>
-          </label>
-          <button class="primary" id="openSaveLayerBtn">保存图片</button>
-          <button class="ghost" id="closeTicket">关闭</button>
-        </div>
-      `);
+      // 1. 先弹出一个提示
+      toast("正在生成高清票根...");
 
-      let currentDataUrl = "";
+      try {
+        // 2. 直接生成 Base64 图片
+        const res = await composeTicketCanvas({
+          activity: data.activity,
+          template,
+          photos: data.ticket.photos,
+          notes: data.ticket.notes,
+          showNotes: state.showNotesInTicket,
+          canvas: $("ticketCanvas"),
+        });
 
-      const updateCanvasAndRender = async () => {
-        $("ticketPreviewArea").innerHTML = '<p class="hint">正在生成高清票根...</p>';
-        
-        try {
-          const res = await composeTicketCanvas({
-            activity: data.activity,
-            template,
-            photos: data.ticket.photos,
-            notes: data.ticket.notes,
-            showNotes: state.showNotesInTicket,
-            canvas: $("ticketCanvas"),
-          });
-          
-          currentDataUrl = res.url;
-          $("ticketPreviewArea").innerHTML = `<img src="${res.url}" style="width:100%; border-radius:12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);" alt="票根">`;
-          
-          if (res.degraded) {
-            toast("由于外框图跨域限制，已生成不带外框的图片。");
-          }
-        } catch (err) {
-          $("ticketPreviewArea").innerHTML = '<p class="hint" style="color:red">生成失败，请重试</p>';
-          toast(err.message || "导出失败");
-        }
-      };
-
-      updateCanvasAndRender();
-
-      $("toggleNotes").onchange = (e) => {
-        state.showNotesInTicket = e.target.checked;
-        updateCanvasAndRender();
-      };
-
-      $("openSaveLayerBtn").onclick = () => {
-        if (!currentDataUrl) return toast("图片正在生成中，请稍候");
-        $("imagePreviewImg").src = currentDataUrl;
+        // 3. 直接将图片塞入全屏遮罩层，一步到位展示出来
+        $("imagePreviewImg").src = res.url;
         $("imagePreviewLayer").classList.remove("hidden");
-      };
-      
-      $("closeTicket").onclick = closeSheet;
+
+        if (res.degraded) {
+          toast("由于外框图跨域限制，已生成不带外框的图片。");
+        }
+      } catch (err) {
+        toast(err.message || "导出失败，请重试");
+      }
     }
 
     async function boot() {
