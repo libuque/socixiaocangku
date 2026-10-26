@@ -23,8 +23,8 @@ window.BOOT_CONFIG = {
           "hidden": true
         },
         "campus": {
-          "x": 26.6,
-          "y": 21.9,
+          "x": 26.1,
+          "y": 23.1,
           "w": 45.6,
           "h": 4,
           "hidden": false
@@ -34,25 +34,25 @@ window.BOOT_CONFIG = {
           "y": 87.7,
           "w": 64,
           "h": 3,
-          "hidden": false
+          "hidden": true
         },
         "track": {
           "x": 0,
-          "y": 28.1,
+          "y": 31,
           "w": 100,
           "h": 40.4,
           "hidden": false
         },
         "grids": {
           "x": 10,
-          "y": 71.7,
+          "y": 75.2,
           "w": 80,
           "h": 16,
           "hidden": false
         },
         "ticketBtn": {
           "x": 27.7,
-          "y": 90.5,
+          "y": 90.9,
           "w": 44,
           "h": 5.5,
           "hidden": false
