@@ -3,7 +3,7 @@ window.BOOT_CONFIG = {
   "activity": {
     "title": "网易美好捕手",
     "titleImageUrl": "",
-    "backgroundUrl": "https://img.remit.ee/i/Zuunv11JHzQm",
+    "backgroundUrl": "https://img.remit.ee/i/76oDMeNxLvLW",
     "introVideoUrl": "https://img.remit.ee/i/SG8zKbclfIhP",
     "progressFrameUrl": "https://img.remit.ee/i/rQd9I0wK3pM6",
     "playGuide": "1. 选择当前所在园区。\n2. 滑动查看可打卡点位，根据谜面前往线下点位。\n3. 扫描点位二维码上传点位照片即可完成打卡。\n4. 完成任意 3 个不同点位后，上传与 Soci 的合照。\n5. 即可生成网易美好四宫格，可前往园区服务台领取惊喜。",
