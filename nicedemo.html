@@ -89,10 +89,13 @@
     
     #app {
       height: 100%;
-      width: min(100vw, 430px);
+      width: 100%;
+      max-width: 430px;
       margin: 0 auto;
       overflow: hidden;
       position: relative;
+      /* PC端居中阴影 */
+      box-shadow: 0 0 20px rgba(0,0,0,0.05);
     }
     .lay {
       position: absolute;
@@ -118,14 +121,9 @@
       padding: 4px 10px;
       color: var(--ink);
       max-width: 100%;
+      cursor: pointer;
     }
     .campus-chip b { font-size: 12px; }
-    .chip {
-      background: transparent;
-      color: var(--teal);
-      font-size: 12px;
-      padding: 0;
-    }
     .progress {
       font-size: 12px;
       color: var(--teal);
@@ -140,7 +138,29 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
+      position: relative;
     }
+
+    /* 滑动提示 */
+    .swipe-hint {
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 12px;
+      color: var(--teal);
+      background: rgba(255,255,255,0.8);
+      padding: 4px 12px;
+      border-radius: 999px;
+      z-index: 5;
+      pointer-events: none;
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 0.6; }
+      50% { opacity: 1; }
+    }
+
     .track {
       width: 100%;
       height: 100%;
@@ -149,10 +169,12 @@
       gap: 12px;
       overflow-x: auto;
       overflow-y: hidden;
-      padding: 4px 0;
+      padding: 30px 0 4px 0; /* 给滑动提示留空间 */
       scroll-snap-type: x mandatory;
       -webkit-overflow-scrolling: touch;
+      cursor: grab;
     }
+    .track:active { cursor: grabbing; }
     .track::-webkit-scrollbar { display: none; }
     
     .card {
@@ -164,7 +186,6 @@
       scroll-snap-align: center;
       box-shadow: none;
     }
-    .card.has-image { background: transparent; box-shadow: none; }
     .card img {
       width: 100%;
       height: auto;
@@ -172,6 +193,7 @@
       object-fit: contain;
       background: transparent;
       display: block;
+      pointer-events: none; /* 防止拖拽时触发图片默认行为 */
     }
     .card .meta { display: none; }
     .empty { text-align: center; color: #7a6a55; font-size: 13px; }
@@ -183,7 +205,7 @@
       align-items: center;
       background: transparent;
     }
-    .dock { flex-direction: column; gap: 8px; }
+    .dock { flex-direction: column; gap: 8px; position: relative; }
     
     .grids-inner {
       width: 100%;
@@ -205,6 +227,7 @@
       font-size: 15px;
       font-weight: bold;
       box-shadow: 0 4px 10px rgba(174, 197, 98, 0.2);
+      cursor: pointer;
     }
     .ticket-btn[disabled] {
       background: rgba(23,50,77,.1);
@@ -219,7 +242,7 @@
       border: 0;
       position: relative;
       background: transparent;
-      overflow: hidden;
+      overflow: visible;
       font-size: 11px;
       color: #6b5a48;
       min-width: 0;
@@ -228,9 +251,8 @@
       justify-content: center;
       appearance: none;
       padding: 0;
+      cursor: pointer;
     }
-    .grid.lit { background: transparent; box-shadow: none; }
-    
     .grid .grid-bg {
       position: absolute;
       inset: 10%;
@@ -240,7 +262,6 @@
       border-radius: 4px;
       z-index: 0;
     }
-
     .grid .photo {
       position: absolute; 
       inset: 10%; 
@@ -249,7 +270,6 @@
       background: transparent;
       z-index: 1;
     }
-    
     .grid .frame {
       position: absolute; inset: 0;
       width: 100%; height: 100%;
@@ -257,13 +277,44 @@
       pointer-events: none;
       z-index: 2;
     }
-    
     .grid.waiting { opacity: .72; }
     .grid span, .grid .label { position: relative; z-index: 3; text-align: center; line-height: 1.2; }
     .grid.me-slot .label { font-size: 10px; }
     .grid.lit { animation: bounce .5s ease; }
     @keyframes bounce { 0%{transform:scale(.78)} 60%{transform:scale(1.08)} 100%{transform:scale(1)} }
     
+    /* 悬浮气泡提示，不占位 */
+    .bubble-tip {
+      position: absolute;
+      bottom: -24px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(23, 50, 77, 0.8);
+      color: #fff;
+      font-size: 10px;
+      padding: 3px 8px;
+      border-radius: 6px;
+      white-space: nowrap;
+      pointer-events: none;
+      animation: fadeInOut 3s forwards;
+    }
+    .bubble-tip::after {
+      content: '';
+      position: absolute;
+      top: -4px;
+      left: 50%;
+      margin-left: -4px;
+      border-width: 4px;
+      border-style: solid;
+      border-color: transparent transparent rgba(23, 50, 77, 0.8) transparent;
+    }
+    @keyframes fadeInOut {
+      0% { opacity: 0; transform: translate(-50%, 5px); }
+      10% { opacity: 1; transform: translate(-50%, 0); }
+      80% { opacity: 1; }
+      100% { opacity: 0; }
+    }
+
     #sheet.sheet {
       position: fixed; inset: 0;
       background: rgba(17,24,32,.46);
@@ -288,6 +339,7 @@
       position: absolute; top: 10px; right: 10px;
       width: 32px; height: 32px; border-radius: 50%;
       background: rgba(23,50,77,.08); color: var(--ink);
+      cursor: pointer;
     }
     
     .campus-list { display: grid; gap: 10px; }
@@ -336,15 +388,6 @@
       resize: none;
     }
     
-    .ticket-preview-container {
-      width: 100%;
-      min-height: 300px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-    }
-
     /* 保存图片的全屏浮层 */
     .image-preview-layer {
       position: fixed;
@@ -363,7 +406,6 @@
       object-fit: contain;
       border-radius: 8px;
       box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-      /* 关键属性：解除 iOS 长按限制 */
       -webkit-touch-callout: default; 
       user-select: auto;
     }
@@ -479,10 +521,13 @@
       我在【<b id="campusName">未选择</b>】园区
     </button>
     <p class="progress lay" id="progressText"></p>
+    
     <div class="track-wrap lay" id="layTrack">
+      <div class="swipe-hint" id="swipeHint">← 左右滑动查看更多 →</div>
       <section id="track" class="track"></section>
       <p id="emptyTrack" class="empty hidden">当前园区暂无待打卡点位</p>
     </div>
+    
     <section class="grids lay" id="layGrids">
       <div class="dock">
         <div class="grids-inner" id="grids"></div>
@@ -498,14 +543,15 @@
     </div>
   </div>
 
-  <!-- 修复后的全屏保存浮层 -->
+  <!-- 保存图片的全屏浮层 -->
   <div id="imagePreviewLayer" class="image-preview-layer hidden">
     <img id="imagePreviewImg" src="" alt="长按保存">
     
-    <div class="tip">长按上方图片保存</div>
+    <div class="tip">手机端请长按上方图片保存</div>
+    <div class="sub-tip">如果长按无效，请点击下方下载按钮</div>
     
     <div class="btn-group">
-      <a id="downloadBtn" class="download-btn" download="nicehunt-ticket.png">点击保存图片到本地</a>
+      <a id="downloadBtn" class="download-btn" download="nicehunt-ticket.png">保存图片到本地</a>
       <button class="close-btn" id="closeImagePreview" type="button">返回活动</button>
     </div>
   </div>
@@ -604,7 +650,7 @@
 
     function renderUserBadge() {
       if (state.me && state.me.userInfo) {
-        $("userBadge").textContent = `${state.me.userInfo.name} | ${state.me.userInfo.id}`;
+        $("userBadge").textContent = state.me.userInfo.name;
         $("userBadge").classList.remove("hidden");
       } else {
         $("userBadge").classList.add("hidden");
@@ -621,11 +667,15 @@
       const cells = [0,1,2].map((i) => {
         const frameImg = `<img class="frame" src="${esc(frame)}" alt="">`;
         const rec = latest[i];
+        // 给有记录的格子加上气泡提示
+        const tipHtml = rec ? `<div class="bubble-tip">点击可重新上传</div>` : "";
+        
         return rec
           ? `<button class="grid lit" data-id="${esc(rec.spotId)}">
                <div class="grid-bg"></div>
                <img class="photo" src="${esc(rec.photoUrl)}" alt="">
                ${frameImg}
+               ${tipHtml}
              </button>`
           : `<div class="grid waiting">
                <div class="grid-bg"></div>
@@ -635,11 +685,14 @@
       }).join("");
       
       const meFrame = `<img class="frame" src="${esc(frame)}" alt="">`;
+      const tipHtmlMe = soci ? `<div class="bubble-tip">点击可重新上传</div>` : "";
+      
       const meCell = soci
         ? `<button class="grid lit me-slot" data-kind="soci">
              <div class="grid-bg"></div>
              <img class="photo" src="${esc(soci)}" alt="我的照片">
              ${meFrame}
+             ${tipHtmlMe}
            </button>`
         : `<button class="grid waiting me-slot" data-kind="soci">
              <div class="grid-bg"></div>
@@ -705,15 +758,48 @@
         return ids.includes(state.me.campus.id);
       });
       
-      $("track").innerHTML = spots.map((s) => `
+      // PC 端鼠标拖拽滑动
+      const trackEl = $("track");
+      let isDown = false;
+      let startX;
+      let scrollLeft;
+      
+      trackEl.onmousedown = (e) => {
+        isDown = true;
+        trackEl.style.cursor = 'grabbing';
+        startX = e.pageX - trackEl.offsetLeft;
+        scrollLeft = trackEl.scrollLeft;
+      };
+      trackEl.onmouseleave = () => { isDown = false; trackEl.style.cursor = 'grab'; };
+      trackEl.onmouseup = () => { isDown = false; trackEl.style.cursor = 'grab'; };
+      trackEl.onmousemove = (e) => {
+        if (!isDown) return;
+        e.preventDefault();
+        const x = e.pageX - trackEl.offsetLeft;
+        const walk = (x - startX) * 2;
+        trackEl.scrollLeft = scrollLeft - walk;
+      };
+      trackEl.onwheel = (e) => {
+        if (e.deltaY !== 0) {
+          e.preventDefault();
+          trackEl.scrollLeft += e.deltaY;
+        }
+      };
+
+      trackEl.innerHTML = spots.map((s) => `
         <article class="card ${s.cardImageUrl ? "has-image" : ""}" data-id="${esc(s.id)}">
           <img src="${esc(s.cardImageUrl)}" alt="${esc(s.name)}">
         </article>`).join("");
+      
+      // 提示隐藏逻辑：只有超过1个才提示
+      $("swipeHint").style.display = spots.length > 1 ? 'block' : 'none';
+
       $("emptyTrack").classList.toggle("hidden", spots.length > 0);
-      $("track").classList.toggle("hidden", spots.length === 0);
-      $("track").querySelectorAll(".card").forEach((el) => {
+      trackEl.classList.toggle("hidden", spots.length === 0);
+      trackEl.querySelectorAll(".card").forEach((el) => {
         el.onclick = () => showSpot(el.dataset.id);
       });
+      
       renderGrids();
       const btn = $("btnTicket");
       const layoutHidden = !!(boot.activity.layout && boot.activity.layout.items && boot.activity.layout.items.ticketBtn && boot.activity.layout.items.ticketBtn.hidden);
@@ -770,10 +856,6 @@
           <input id="authName" type="text" maxlength="10" placeholder="请输入您的昵称" value="${state.me.userInfo ? state.me.userInfo.name : ''}">
         </div>
         <div class="form-group">
-          <label>工号</label>
-          <input id="authId" type="text" maxlength="20" placeholder="请输入您的工号" value="${state.me.userInfo ? state.me.userInfo.id : ''}">
-        </div>
-        <div class="form-group">
           <label>选择所在园区</label>
           <select id="authCampus">
             <option value="" disabled ${!selectedCampusId ? 'selected' : ''}>请选择园区</option>
@@ -787,16 +869,14 @@
 
       $("btnDoAuth").onclick = () => {
         const name = $("authName").value.trim();
-        const id = $("authId").value.trim();
         const campusId = $("authCampus").value;
         
         if (!name) return toast("请输入昵称");
-        if (!id) return toast("请输入工号");
         if (!campusId) return toast("请选择园区");
 
         const campus = (state.boot.campuses || []).find(c => c.id === campusId);
         
-        state.me.userInfo = { name, id };
+        state.me.userInfo = { name };
         state.me.campus = campus;
         saveMe();
         closeSheet();
