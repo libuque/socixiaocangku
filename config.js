@@ -60,10 +60,10 @@ window.BOOT_CONFIG = {
       }
     },
     "gridLabels": [
-      "捕捉瞬间",
-      "捕捉瞬间",
-      "捕捉瞬间",
-      "点击与SOCI合照"
+      "",
+      "",
+      "",
+      "与SOCI合照"
     ]
   },
   "campuses": [
