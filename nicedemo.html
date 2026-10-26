@@ -139,7 +139,7 @@
       position: relative;
     }
 
-    /* 滑动提示 */
+    /* 滑动提示：仅展示一次 */
     .swipe-hint {
       position: absolute;
       top: 10px;
@@ -147,16 +147,20 @@
       transform: translateX(-50%);
       font-size: 12px;
       color: var(--teal);
-      background: rgba(255,255,255,0.8);
-      padding: 4px 12px;
+      background: rgba(255,255,255,0.9);
+      padding: 6px 16px;
       border-radius: 999px;
       z-index: 5;
       pointer-events: none;
-      animation: pulse 2s infinite;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      opacity: 0;
+      animation: fadeSwipe 2.5s ease-in-out forwards;
     }
-    @keyframes pulse {
-      0%, 100% { opacity: 0.6; }
-      50% { opacity: 1; }
+    @keyframes fadeSwipe {
+      0% { opacity: 0; transform: translate(-50%, 5px); }
+      15% { opacity: 1; transform: translate(-50%, 0); }
+      70% { opacity: 1; transform: translate(-50%, 0); }
+      100% { opacity: 0; transform: translate(-50%, -5px); }
     }
 
     .track {
@@ -196,7 +200,6 @@
     .card .meta { display: none; }
     .empty { text-align: center; color: #7a6a55; font-size: 13px; }
     
-    /* 修改：底部格子容器定位 */
     .grids, .dock {
       width: 100%;
       height: 100%;
@@ -290,7 +293,7 @@
     /* 悬浮提示：移到顶部，避免遮挡 */
     .bubble-tip {
       position: absolute;
-      top: -30px; /* 移到格子上方 */
+      top: -30px;
       left: 50%;
       transform: translateX(-50%);
       background: rgba(23, 50, 77, 0.85);
@@ -452,9 +455,9 @@
       width: 100%;
       max-width: 280px;
     }
-    .image-preview-layer .download-btn {
-      background: var(--btn-green);
-      color: #fff;
+    
+    /* 下载与跳转按钮样式 */
+    .download-btn, .jump-btn {
       border-radius: 999px;
       padding: 12px;
       font-size: 16px;
@@ -463,6 +466,16 @@
       cursor: pointer;
       text-align: center;
       text-decoration: none;
+      display: block;
+    }
+    .download-btn {
+      background: var(--btn-green);
+      color: #fff;
+    }
+    .jump-btn {
+      background: transparent;
+      color: #fff;
+      border: 1px solid rgba(255,255,255,0.4);
     }
 
     .type-pop { text-align: center; padding: 6px 8px 14px; }
@@ -535,7 +548,7 @@
     <p class="progress lay" id="progressText"></p>
     
     <div class="track-wrap lay" id="layTrack">
-      <div class="swipe-hint" id="swipeHint">← 左右滑动查看更多 →</div>
+      <div class="swipe-hint hidden" id="swipeHint">← 左右滑动查看更多 →</div>
       <section id="track" class="track"></section>
       <p id="emptyTrack" class="empty hidden">当前园区暂无待打卡点位</p>
     </div>
@@ -562,10 +575,12 @@
     <img id="imagePreviewImg" src="" alt="长按保存">
     
     <div class="tip">手机端请长按上方图片保存</div>
-    <div class="sub-tip">如果长按无效，请点击下方下载按钮</div>
+    <div class="sub-tip">电脑端可点击下方保存按钮</div>
     
     <div class="btn-group">
-      <a id="downloadBtn" class="download-btn" href="https://e.netease.com/community/post/165327" target="_blank">跳转易网</a>
+      <!-- 恢复下载按钮，但修改逻辑：通过A标签直接下载 -->
+      <a id="downloadBtn" class="download-btn" download="nicehunt-ticket.png">保存图片到本地</a>
+      <a class="jump-btn" href="https://e.netease.com/community/post/165327" target="_blank">跳转易网</a>
     </div>
   </div>
 
@@ -815,7 +830,17 @@
           <img src="${esc(s.cardImageUrl)}" alt="${esc(s.name)}">
         </article>`).join("");
       
-      $("swipeHint").style.display = spots.length > 1 ? 'block' : 'none';
+      // 提示：如果多于1个，则显示提示，2.5秒后自动隐藏
+      const hintEl = $("swipeHint");
+      if (spots.length > 1) {
+        hintEl.classList.remove("hidden");
+        // 如果之前加过动画，为了重复触发，可以先置空
+        hintEl.style.animation = 'none';
+        hintEl.offsetHeight; // 触发重绘
+        hintEl.style.animation = 'fadeSwipe 2.5s ease-in-out forwards';
+      } else {
+        hintEl.classList.add("hidden");
+      }
 
       $("emptyTrack").classList.toggle("hidden", spots.length > 0);
       trackEl.classList.toggle("hidden", spots.length === 0);
@@ -1282,10 +1307,14 @@
             ctx.restore();
           };
 
+          // 修改：昵称字号放大，位置往上移
           const drawNickname = () => {
             if (!showNotes || !state.me.userInfo || !state.me.userInfo.name) return;
-            const fontSize = Math.round(W / 45); 
-            const margin = Math.round(W / 30); 
+            
+            // 字号放大：原来 W/45，改为 W/38
+            const fontSize = Math.round(W / 38); 
+            // 距离底边距上移：原来 W/30，改为 W/22
+            const margin = Math.round(W / 22); 
 
             ctx.font = `italic 500 ${fontSize}px "Source Han Sans SC", "Noto Sans SC", "PingFang SC", sans-serif`;
             
@@ -1381,7 +1410,9 @@
           canvas: $("ticketCanvas"),
         });
 
+        // 将Base64图片同时赋给展示图和下载链接
         $("imagePreviewImg").src = res.url;
+        $("downloadBtn").href = res.url;
         $("imagePreviewLayer").classList.remove("hidden");
 
         if (res.degraded) {
