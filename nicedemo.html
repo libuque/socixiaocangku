@@ -41,7 +41,7 @@
     .cover .actions {
       position: absolute;
       left: 50%;
-      top: 66.66%;
+      top: 78%; /* 调整：按钮下移 */
       transform: translate(-50%, -50%);
       z-index: 52;
     }
@@ -139,7 +139,7 @@
       position: relative;
     }
 
-    /* 滑动提示：仅展示一次 */
+    /* 滑动提示 */
     .swipe-hint {
       position: absolute;
       top: 10px;
@@ -196,6 +196,7 @@
       background: transparent;
       display: block;
       pointer-events: none;
+      filter: drop-shadow(0 6px 16px rgba(0,0,0,0.08));
     }
     .card .meta { display: none; }
     .empty { text-align: center; color: #7a6a55; font-size: 13px; }
@@ -289,8 +290,8 @@
     .grid.me-slot .label { font-size: 10px; }
     .grid.lit { animation: bounce .5s ease; }
     @keyframes bounce { 0%{transform:scale(.78)} 60%{transform:scale(1.08)} 100%{transform:scale(1)} }
-    
-    /* 悬浮提示：移到顶部，避免遮挡 */
+
+    /* 一次性悬浮提示 */
     .bubble-tip {
       position: absolute;
       top: -30px;
@@ -578,7 +579,6 @@
     <div class="sub-tip">电脑端可点击下方保存按钮</div>
     
     <div class="btn-group">
-      <!-- 恢复下载按钮，但修改逻辑：通过A标签直接下载 -->
       <a id="downloadBtn" class="download-btn" download="nicehunt-ticket.png">保存图片到本地</a>
       <a class="jump-btn" href="https://e.netease.com/community/post/165327" target="_blank">跳转易网</a>
     </div>
@@ -598,6 +598,8 @@
       guideShown: false,
       showNotesInTicket: true,
       authCampusId: null,
+      hasShownSwipe: localStorage.getItem("nh_has_shown_swipe") === "1", // 记录是否弹过滑动提示
+      hasShownReupload: localStorage.getItem("nh_has_shown_reupload") === "1", // 记录是否弹过重新上传提示
     };
     const $ = (id) => document.getElementById(id);
     const toast = (msg) => {
@@ -694,16 +696,12 @@
       
       let gridHtml = "";
       
-      // 前三个格子按打卡数量逐步出现
-      const completedCount = latest.length;
-      const totalSpots = 3; 
-      
-      for (let i = 0; i < totalSpots; i++) {
-        if (i > completedCount) continue; // 如果还没打到这个进度，就不渲染该格子
-
+      // 四个格子全部显示
+      for (let i = 0; i < 3; i++) {
         const frameImg = `<img class="frame" src="${esc(frame)}" alt="">`;
         const rec = latest[i];
-        const tipHtml = rec ? `<div class="bubble-tip">点击可重新上传</div>` : "";
+        // 仅在第一次打卡且未提示过时，显示提示
+        const tipHtml = (rec && !state.hasShownReupload) ? `<div class="bubble-tip">点击可重新上传</div>` : "";
         
         if (rec) {
           gridHtml += `<button class="grid lit" data-id="${esc(rec.spotId)}">
@@ -721,9 +719,8 @@
         }
       }
       
-      // 第四个 SOCI 格子始终显示
       const meFrame = `<img class="frame" src="${esc(frame)}" alt="">`;
-      const tipHtmlMe = soci ? `<div class="bubble-tip">点击可重新上传</div>` : "";
+      const tipHtmlMe = (soci && !state.hasShownReupload) ? `<div class="bubble-tip">点击可重新上传</div>` : "";
       
       if (soci) {
         gridHtml += `<button class="grid lit me-slot" data-kind="soci">
@@ -740,6 +737,12 @@
            </button>`;
       }
       
+      // 如果出现了图片，且之前没提示过，标记为已提示
+      if ((latest.length > 0 || soci) && !state.hasShownReupload) {
+        state.hasShownReupload = true;
+        localStorage.setItem("nh_has_shown_reupload", "1");
+      }
+
       $("grids").innerHTML = gridHtml;
       $("grids").querySelectorAll("button.grid").forEach((btn) => {
         btn.onclick = () => {
@@ -830,14 +833,15 @@
           <img src="${esc(s.cardImageUrl)}" alt="${esc(s.name)}">
         </article>`).join("");
       
-      // 提示：如果多于1个，则显示提示，2.5秒后自动隐藏
+      // 提示：如果是首次进入且有多个点位，显示一次提示
       const hintEl = $("swipeHint");
-      if (spots.length > 1) {
+      if (spots.length > 1 && !state.hasShownSwipe) {
         hintEl.classList.remove("hidden");
-        // 如果之前加过动画，为了重复触发，可以先置空
         hintEl.style.animation = 'none';
-        hintEl.offsetHeight; // 触发重绘
+        hintEl.offsetHeight;
         hintEl.style.animation = 'fadeSwipe 2.5s ease-in-out forwards';
+        state.hasShownSwipe = true;
+        localStorage.setItem("nh_has_shown_swipe", "1");
       } else {
         hintEl.classList.add("hidden");
       }
@@ -1307,13 +1311,11 @@
             ctx.restore();
           };
 
-          // 修改：昵称字号放大，位置往上移
+          // 昵称字号放大，位置往上移
           const drawNickname = () => {
             if (!showNotes || !state.me.userInfo || !state.me.userInfo.name) return;
             
-            // 字号放大：原来 W/45，改为 W/38
             const fontSize = Math.round(W / 38); 
-            // 距离底边距上移：原来 W/30，改为 W/22
             const margin = Math.round(W / 22); 
 
             ctx.font = `italic 500 ${fontSize}px "Source Han Sans SC", "Noto Sans SC", "PingFang SC", sans-serif`;
@@ -1410,7 +1412,6 @@
           canvas: $("ticketCanvas"),
         });
 
-        // 将Base64图片同时赋给展示图和下载链接
         $("imagePreviewImg").src = res.url;
         $("downloadBtn").href = res.url;
         $("imagePreviewLayer").classList.remove("hidden");
