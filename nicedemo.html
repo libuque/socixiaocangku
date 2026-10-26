@@ -94,8 +94,6 @@
       margin: 0 auto;
       overflow: hidden;
       position: relative;
-      /* PC端居中阴影 */
-      box-shadow: 0 0 20px rgba(0,0,0,0.05);
     }
     .lay {
       position: absolute;
@@ -169,7 +167,7 @@
       gap: 12px;
       overflow-x: auto;
       overflow-y: hidden;
-      padding: 30px 0 4px 0; /* 给滑动提示留空间 */
+      padding: 30px 0 4px 0;
       scroll-snap-type: x mandatory;
       -webkit-overflow-scrolling: touch;
       cursor: grab;
@@ -193,10 +191,12 @@
       object-fit: contain;
       background: transparent;
       display: block;
-      pointer-events: none; /* 防止拖拽时触发图片默认行为 */
+      pointer-events: none;
     }
     .card .meta { display: none; }
     .empty { text-align: center; color: #7a6a55; font-size: 13px; }
+    
+    /* 修改：底部格子容器定位 */
     .grids, .dock {
       width: 100%;
       height: 100%;
@@ -205,7 +205,11 @@
       align-items: center;
       background: transparent;
     }
-    .dock { flex-direction: column; gap: 8px; position: relative; }
+    .dock { 
+      flex-direction: column; 
+      gap: 8px; 
+      position: relative; 
+    }
     
     .grids-inner {
       width: 100%;
@@ -283,30 +287,31 @@
     .grid.lit { animation: bounce .5s ease; }
     @keyframes bounce { 0%{transform:scale(.78)} 60%{transform:scale(1.08)} 100%{transform:scale(1)} }
     
-    /* 悬浮气泡提示，不占位 */
+    /* 悬浮提示：移到顶部，避免遮挡 */
     .bubble-tip {
       position: absolute;
-      bottom: -24px;
+      top: -30px; /* 移到格子上方 */
       left: 50%;
       transform: translateX(-50%);
-      background: rgba(23, 50, 77, 0.8);
+      background: rgba(23, 50, 77, 0.85);
       color: #fff;
       font-size: 10px;
-      padding: 3px 8px;
+      padding: 4px 8px;
       border-radius: 6px;
       white-space: nowrap;
       pointer-events: none;
       animation: fadeInOut 3s forwards;
+      z-index: 10;
     }
     .bubble-tip::after {
       content: '';
       position: absolute;
-      top: -4px;
+      bottom: -4px;
       left: 50%;
       margin-left: -4px;
       border-width: 4px;
       border-style: solid;
-      border-color: transparent transparent rgba(23, 50, 77, 0.8) transparent;
+      border-color: rgba(23, 50, 77, 0.85) transparent transparent transparent;
     }
     @keyframes fadeInOut {
       0% { opacity: 0; transform: translate(-50%, 5px); }
@@ -400,6 +405,21 @@
       justify-content: center;
       padding: 20px;
     }
+    /* 顶部关闭图标 */
+    .close-icon {
+      position: absolute;
+      top: 24px;
+      right: 24px;
+      color: #fff;
+      font-size: 32px;
+      line-height: 1;
+      cursor: pointer;
+      z-index: 1000;
+      opacity: 0.7;
+      transition: opacity 0.2s;
+    }
+    .close-icon:hover { opacity: 1; }
+    
     .image-preview-layer img {
       max-width: 100%;
       max-height: 65vh;
@@ -408,6 +428,7 @@
       box-shadow: 0 10px 30px rgba(0,0,0,0.5);
       -webkit-touch-callout: default; 
       user-select: auto;
+      margin-top: 20px;
     }
     .image-preview-layer .tip {
       color: #fff;
@@ -442,15 +463,6 @@
       cursor: pointer;
       text-align: center;
       text-decoration: none;
-    }
-    .image-preview-layer .close-btn {
-      background: transparent;
-      color: #fff;
-      border-radius: 999px;
-      padding: 12px;
-      font-size: 15px;
-      border: 1px solid rgba(255,255,255,0.3);
-      cursor: pointer;
     }
 
     .type-pop { text-align: center; padding: 6px 8px 14px; }
@@ -545,14 +557,15 @@
 
   <!-- 保存图片的全屏浮层 -->
   <div id="imagePreviewLayer" class="image-preview-layer hidden">
+    <div class="close-icon" id="closeImagePreview">×</div>
+    
     <img id="imagePreviewImg" src="" alt="长按保存">
     
     <div class="tip">手机端请长按上方图片保存</div>
     <div class="sub-tip">如果长按无效，请点击下方下载按钮</div>
     
     <div class="btn-group">
-      <a id="downloadBtn" class="download-btn" download="nicehunt-ticket.png">保存图片到本地</a>
-      <button class="close-btn" id="closeImagePreview" type="button">返回活动</button>
+      <a id="downloadBtn" class="download-btn" href="https://e.netease.com/community/post/165327" target="_blank">跳转易网</a>
     </div>
   </div>
 
@@ -664,43 +677,55 @@
       
       const labels = state.boot.activity.gridLabels || ["捕捉瞬间", "捕捉瞬间", "捕捉瞬间", "与SOCI合照"];
       
-      const cells = [0,1,2].map((i) => {
+      let gridHtml = "";
+      
+      // 前三个格子按打卡数量逐步出现
+      const completedCount = latest.length;
+      const totalSpots = 3; 
+      
+      for (let i = 0; i < totalSpots; i++) {
+        if (i > completedCount) continue; // 如果还没打到这个进度，就不渲染该格子
+
         const frameImg = `<img class="frame" src="${esc(frame)}" alt="">`;
         const rec = latest[i];
-        // 给有记录的格子加上气泡提示
         const tipHtml = rec ? `<div class="bubble-tip">点击可重新上传</div>` : "";
         
-        return rec
-          ? `<button class="grid lit" data-id="${esc(rec.spotId)}">
+        if (rec) {
+          gridHtml += `<button class="grid lit" data-id="${esc(rec.spotId)}">
                <div class="grid-bg"></div>
                <img class="photo" src="${esc(rec.photoUrl)}" alt="">
                ${frameImg}
                ${tipHtml}
-             </button>`
-          : `<div class="grid waiting">
+             </button>`;
+        } else {
+          gridHtml += `<div class="grid waiting">
                <div class="grid-bg"></div>
                ${frameImg}
                <span class="label">${esc(labels[i] || "")}</span>
              </div>`;
-      }).join("");
+        }
+      }
       
+      // 第四个 SOCI 格子始终显示
       const meFrame = `<img class="frame" src="${esc(frame)}" alt="">`;
       const tipHtmlMe = soci ? `<div class="bubble-tip">点击可重新上传</div>` : "";
       
-      const meCell = soci
-        ? `<button class="grid lit me-slot" data-kind="soci">
+      if (soci) {
+        gridHtml += `<button class="grid lit me-slot" data-kind="soci">
              <div class="grid-bg"></div>
              <img class="photo" src="${esc(soci)}" alt="我的照片">
              ${meFrame}
              ${tipHtmlMe}
-           </button>`
-        : `<button class="grid waiting me-slot" data-kind="soci">
+           </button>`;
+      } else {
+        gridHtml += `<button class="grid waiting me-slot" data-kind="soci">
              <div class="grid-bg"></div>
              ${meFrame}
              <span class="label">${esc(labels[3] || "")}</span>
            </button>`;
-           
-      $("grids").innerHTML = cells + meCell;
+      }
+      
+      $("grids").innerHTML = gridHtml;
       $("grids").querySelectorAll("button.grid").forEach((btn) => {
         btn.onclick = () => {
           if (btn.dataset.kind === "soci") {
@@ -758,7 +783,6 @@
         return ids.includes(state.me.campus.id);
       });
       
-      // PC 端鼠标拖拽滑动
       const trackEl = $("track");
       let isDown = false;
       let startX;
@@ -791,7 +815,6 @@
           <img src="${esc(s.cardImageUrl)}" alt="${esc(s.name)}">
         </article>`).join("");
       
-      // 提示隐藏逻辑：只有超过1个才提示
       $("swipeHint").style.display = spots.length > 1 ? 'block' : 'none';
 
       $("emptyTrack").classList.toggle("hidden", spots.length > 0);
@@ -1358,9 +1381,7 @@
           canvas: $("ticketCanvas"),
         });
 
-        // 将Base64图片同时赋给展示图和下载链接
         $("imagePreviewImg").src = res.url;
-        $("downloadBtn").href = res.url;
         $("imagePreviewLayer").classList.remove("hidden");
 
         if (res.degraded) {
@@ -1471,6 +1492,7 @@
     $("sheetClose").onclick = closeSheet;
     $("sheet").onclick = (e) => { if (e.target.id === "sheet") closeSheet(); };
     
+    // 绑定顶部关闭图标事件
     $("closeImagePreview").onclick = () => {
       $("imagePreviewLayer").classList.add("hidden");
     };
