@@ -1,291 +1,1487 @@
-window.BOOT_CONFIG = {
-  "ok": true,
-  "activity": {
-    "title": "网易美好捕手",
-    "titleImageUrl": "",
-    "backgroundUrl": "https://img.remit.ee/i/76oDMeNxLvLW",
-    "introVideoUrl": "https://img.remit.ee/i/SG8zKbclfIhP",
-    "progressFrameUrl": "https://img.remit.ee/i/rQd9I0wK3pM6",
-    "playGuide": "1. 选择当前所在园区。\n2. 滑动查看可打卡点位，根据谜面前往线下点位。\n3. 扫描点位二维码上传点位照片即可完成打卡。\n4. 完成任意 3 个不同点位后，上传与 Soci 的合照。\n5. 即可生成网易美好四宫格，可前往园区服务台领取惊喜。",
-    "prizeHint": "可前往当前园区服务台领取惊喜奖品，也可保存票根图片分享至易网评论区参与惊喜抽奖。",
-    "sociMeaning": "与 Soci 合照\n你也是网易美好的重要组成！",
-    "layout": {
-      "canvas": {
-        "w": 390,
-        "h": 844
-      },
-      "items": {
-        "title": {
-          "x": 0,
-          "y": 2,
-          "w": 100,
-          "h": 18.6,
-          "hidden": true
-        },
-        "campus": {
-          "x": 26.1,
-          "y": 23.1,
-          "w": 45.6,
-          "h": 4,
-          "hidden": false
-        },
-        "progress": {
-          "x": 18,
-          "y": 87.7,
-          "w": 64,
-          "h": 3,
-          "hidden": true
-        },
-        "track": {
-          "x": 0,
-          "y": 31,
-          "w": 100,
-          "h": 40.4,
-          "hidden": false
-        },
-        "grids": {
-          "x": 10,
-          "y": 75.2,
-          "w": 80,
-          "h": 16,
-          "hidden": false
-        },
-        "ticketBtn": {
-          "x": 27.7,
-          "y": 90.9,
-          "w": 44,
-          "h": 5.5,
-          "hidden": false
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <title>网易美好捕手</title>
+  <style>
+    :root {
+      --ink: #17324d;
+      --teal: #147d78;
+      --paper: #f6efe2;
+      --card: rgba(255,252,246,.94);
+      --warn: #c45c26;
+      --btn-green: #aec562;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      height: 100%;
+      overflow: hidden;
+      background: var(--paper);
+      color: var(--ink);
+      font-family: "PingFang SC","Microsoft YaHei",sans-serif;
+    }
+    button, input, textarea, select { font: inherit; }
+    .hidden { display: none !important; pointer-events: none !important; }
+    .toast {
+      position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%);
+      background: #17324d; color: #fff; padding: 10px 16px; border-radius: 999px;
+      z-index: 90; max-width: 84vw; font-size: 13px; text-align: center; line-height: 1.5;
+    }
+    .cover {
+      position: fixed; inset: 0; background: #000;
+      z-index: 50; color: #fff;
+    }
+    .cover video {
+      position: absolute; inset: 0;
+      width: 100%; height: 100%;
+      object-fit: cover;
+      background: #000;
+    }
+    .cover .actions {
+      position: absolute;
+      left: 50%;
+      top: 66.66%;
+      transform: translate(-50%, -50%);
+      z-index: 52;
+    }
+    #introFallback {
+      position: absolute; left: 50%; top: 58%;
+      transform: translate(-50%, -50%);
+      z-index: 51;
+    }
+    
+    .primary, .ghost, .chip, .icon-btn { border: 0; cursor: pointer; }
+    .primary, .ghost { 
+      border-radius: 999px; 
+      padding: 12px 24px; 
+      font-family: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, -apple-system, sans-serif;
+      font-size: 16px;
+      font-weight: 600;
+    }
+    .primary { 
+      background: #fff;
+      color: var(--teal);
+      border: 3px solid var(--btn-green);
+      box-shadow: 0 4px 10px rgba(174, 197, 98, 0.25);
+    }
+    .ghost { 
+      background: #fff;
+      color: var(--ink);
+      border: 3px solid #e5e7eb;
+    }
+    
+    .user-badge {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      z-index: 10;
+      background: rgba(255,255,255,0.85);
+      backdrop-filter: blur(4px);
+      padding: 6px 14px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: bold;
+      color: var(--teal);
+      border: 1px solid rgba(20,125,120,0.2);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+    
+    #app {
+      height: 100%;
+      width: 100%;
+      max-width: 430px;
+      margin: 0 auto;
+      overflow: hidden;
+      position: relative;
+    }
+    .lay {
+      position: absolute;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .hero img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: block;
+    }
+    .campus-chip {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      font-size: 12px;
+      background: rgba(255,255,255,.78);
+      border: 1px solid rgba(23,50,77,.08);
+      border-radius: 999px;
+      padding: 4px 10px;
+      color: var(--ink);
+      max-width: 100%;
+      cursor: pointer;
+    }
+    .campus-chip b { font-size: 12px; }
+    .progress {
+      font-size: 12px;
+      color: var(--teal);
+      text-align: center;
+      width: 100%;
+    }
+    .track-wrap {
+      width: 100%;
+      height: 100%;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    /* 滑动提示：仅展示一次 */
+    .swipe-hint {
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 12px;
+      color: var(--teal);
+      background: rgba(255,255,255,0.9);
+      padding: 6px 16px;
+      border-radius: 999px;
+      z-index: 5;
+      pointer-events: none;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      opacity: 0;
+      animation: fadeSwipe 2.5s ease-in-out forwards;
+    }
+    @keyframes fadeSwipe {
+      0% { opacity: 0; transform: translate(-50%, 5px); }
+      15% { opacity: 1; transform: translate(-50%, 0); }
+      70% { opacity: 1; transform: translate(-50%, 0); }
+      100% { opacity: 0; transform: translate(-50%, -5px); }
+    }
+
+    .track {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      overflow-x: auto;
+      overflow-y: hidden;
+      padding: 30px 0 4px 0;
+      scroll-snap-type: x mandatory;
+      -webkit-overflow-scrolling: touch;
+      cursor: grab;
+    }
+    .track:active { cursor: grabbing; }
+    .track::-webkit-scrollbar { display: none; }
+    
+    .card {
+      min-width: 88%; 
+      background: transparent;
+      border: 0;
+      border-radius: 0;
+      overflow: visible;
+      scroll-snap-align: center;
+      box-shadow: none;
+    }
+    .card img {
+      width: 100%;
+      height: auto;
+      max-height: 100%;
+      object-fit: contain;
+      background: transparent;
+      display: block;
+      pointer-events: none;
+    }
+    .card .meta { display: none; }
+    .empty { text-align: center; color: #7a6a55; font-size: 13px; }
+    
+    .grids, .dock {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: transparent;
+    }
+    .dock { 
+      flex-direction: column; 
+      gap: 8px; 
+      position: relative; 
+    }
+    
+    .grids-inner {
+      width: 100%;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6px; 
+      padding: 0 4px;
+      justify-content: center;
+    }
+    .ticket-btn {
+      width: 100%;
+      height: 100%;
+      background: #fff;
+      color: var(--teal);
+      border: 3px solid var(--btn-green);
+      border-radius: 999px;
+      padding: 0 12px;
+      font-family: system-ui, -apple-system, sans-serif;
+      font-size: 15px;
+      font-weight: bold;
+      box-shadow: 0 4px 10px rgba(174, 197, 98, 0.2);
+      cursor: pointer;
+    }
+    .ticket-btn[disabled] {
+      background: rgba(23,50,77,.1);
+      color: rgba(23,50,77,.4);
+      border-color: transparent;
+      box-shadow: none;
+    }
+    
+    .grid {
+      aspect-ratio: 1;
+      border-radius: 0;
+      border: 0;
+      position: relative;
+      background: transparent;
+      overflow: visible;
+      font-size: 11px;
+      color: #6b5a48;
+      min-width: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      appearance: none;
+      padding: 0;
+      cursor: pointer;
+    }
+    .grid .grid-bg {
+      position: absolute;
+      inset: 10%;
+      width: 80%;
+      height: 80%;
+      background: #ffffff;
+      border-radius: 4px;
+      z-index: 0;
+    }
+    .grid .photo {
+      position: absolute; 
+      inset: 10%; 
+      width: 80%; height: 80%;
+      object-fit: cover;
+      background: transparent;
+      z-index: 1;
+    }
+    .grid .frame {
+      position: absolute; inset: 0;
+      width: 100%; height: 100%;
+      object-fit: contain; 
+      pointer-events: none;
+      z-index: 2;
+    }
+    .grid.waiting { opacity: .72; }
+    .grid span, .grid .label { position: relative; z-index: 3; text-align: center; line-height: 1.2; }
+    .grid.me-slot .label { font-size: 10px; }
+    .grid.lit { animation: bounce .5s ease; }
+    @keyframes bounce { 0%{transform:scale(.78)} 60%{transform:scale(1.08)} 100%{transform:scale(1)} }
+
+    #sheet.sheet {
+      position: fixed; inset: 0;
+      background: rgba(17,24,32,.46);
+      z-index: 40;
+      align-items: center;
+      justify-content: center;
+      padding: 18px;
+      display: none;
+    }
+    #sheet.sheet:not(.hidden) { display: flex; }
+    .panel {
+      position: relative;
+      width: min(92vw, 420px);
+      max-height: 84vh;
+      overflow: hidden;
+      background: #fffaf3;
+      border-radius: 22px;
+      padding: 42px 18px 18px;
+    }
+    .panel-body { overflow: auto; max-height: calc(84vh - 60px); }
+    .icon-btn {
+      position: absolute; top: 10px; right: 10px;
+      width: 32px; height: 32px; border-radius: 50%;
+      background: rgba(23,50,77,.08); color: var(--ink);
+      cursor: pointer;
+    }
+    
+    .campus-list { display: grid; gap: 10px; }
+    .pick {
+      display: flex; flex-direction: column; gap: 8px; align-items: center; justify-content: center;
+      background: #fff; border-radius: 16px; padding: 16px 10px; border: 1px solid #eee; text-align: center; width: 100%;
+      cursor: pointer;
+    }
+    .pick.active { border-color: var(--btn-green); background: #f6fbf0; }
+    .pick b { font-size: 16px; color: var(--ink); }
+    
+    .upload-area {
+      width: 100%;
+      aspect-ratio: 4/3;
+      max-height: 240px;
+      border: 2px dashed #d1c4b0;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #fcf9f3;
+      cursor: pointer;
+      overflow: hidden;
+      position: relative;
+      margin: 10px auto 4px;
+    }
+    .upload-area span { color: #8c7b66; font-size: 14px; font-weight: 500; }
+    .upload-area img { width: 100%; height: 100%; object-fit: contain; display: block; }
+    
+    .reupload-tip {
+      text-align: center;
+      font-size: 11px;
+      color: #9ca3af;
+      margin-bottom: 12px;
+    }
+    
+    textarea { 
+      width: 100%; 
+      margin: 8px 0; 
+      min-height: 60px; 
+      border-radius: 12px; 
+      border: 1px solid #e4d8c4; 
+      padding: 10px; 
+      text-align: center; 
+      background: #fff;
+      resize: none;
+    }
+    
+    /* 保存图片的全屏浮层 */
+    .image-preview-layer {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.95);
+      z-index: 999;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    /* 顶部关闭图标 */
+    .close-icon {
+      position: absolute;
+      top: 24px;
+      right: 24px;
+      color: #fff;
+      font-size: 32px;
+      line-height: 1;
+      cursor: pointer;
+      z-index: 1000;
+      opacity: 0.7;
+      transition: opacity 0.2s;
+    }
+    .close-icon:hover { opacity: 1; }
+    
+    .image-preview-layer img {
+      max-width: 100%;
+      max-height: 65vh;
+      object-fit: contain;
+      border-radius: 8px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+      -webkit-touch-callout: default; 
+      user-select: auto;
+      margin-top: 20px;
+    }
+    .image-preview-layer .tip {
+      color: #fff;
+      font-size: 16px;
+      font-weight: bold;
+      margin-top: 20px;
+      text-align: center;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+    }
+    .image-preview-layer .sub-tip {
+      color: #a0aec0;
+      font-size: 12px;
+      margin-top: 8px;
+      text-align: center;
+    }
+    .image-preview-layer .btn-group {
+      margin-top: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      width: 100%;
+      max-width: 280px;
+    }
+    
+    /* 下载与跳转按钮样式 */
+    .download-btn, .jump-btn {
+      border-radius: 999px;
+      padding: 12px;
+      font-size: 16px;
+      font-weight: bold;
+      border: 0;
+      cursor: pointer;
+      text-align: center;
+      text-decoration: none;
+      display: block;
+    }
+    .download-btn {
+      background: var(--btn-green);
+      color: #fff;
+    }
+    .jump-btn {
+      background: transparent;
+      color: #fff;
+      border: 1px solid rgba(255,255,255,0.4);
+    }
+
+    .type-pop { text-align: center; padding: 6px 8px 14px; }
+    .hint { font-size: 12px; color: #6b7280; line-height: 1.6; white-space: pre-wrap; }
+    .btn-row { display: flex; gap: 8px; justify-content: center; margin-top: 12px; flex-wrap: wrap; align-items: center; }
+    
+    .btn-row label {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      cursor: pointer;
+      margin: 0 8px 0 0;
+    }
+    .btn-row input[type="checkbox"] {
+      margin: 0;
+      width: auto;
+    }
+
+    .spot-visual { width: 100%; max-height: 180px; object-fit: contain; background: transparent; margin: 0 auto; display: block; }
+    .spot-title { text-align: center; margin: 10px 0 6px; }
+    .spot-intro { text-align: center; margin-bottom: 8px; }
+
+    .form-group { margin-bottom: 16px; text-align: center; }
+    .form-group label { display: block; font-size: 14px; color: #6b7280; margin-bottom: 6px; font-weight: bold; }
+    .form-group input { 
+      width: 100%; 
+      padding: 12px 14px; 
+      border-radius: 12px; 
+      border: 1px solid #e4d8c4; 
+      background: #fff;
+      font-size: 15px;
+      text-align: center; 
+    }
+    .form-group select {
+      width: 100%; 
+      padding: 12px 14px; 
+      border-radius: 12px; 
+      border: 1px solid #e4d8c4; 
+      background: #fff;
+      font-size: 15px;
+      text-align: center;
+      text-align-last: center;
+      appearance: none;
+      -webkit-appearance: none;
+      background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+      background-repeat: no-repeat;
+      background-position: right 1rem center;
+      background-size: 1em;
+    }
+    .form-group input:focus, .form-group select:focus { outline: none; border-color: var(--btn-green); }
+  </style>
+</head>
+<body>
+  <div id="toast" class="toast hidden"></div>
+  <section id="intro" class="cover hidden">
+    <video id="introVideo" playsinline autoplay muted></video>
+    <p id="introFallback" class="hidden">动画加载中…若无法播放可直接进入</p>
+    <div class="actions">
+      <button class="primary" id="skipIntro">进入活动</button>
+    </div>
+  </section>
+
+  <main id="app">
+    <div id="userBadge" class="user-badge hidden"></div>
+
+    <header class="hero lay" id="layTitle"><img id="titleImg" alt="活动主题" /></header>
+    <button class="campus-chip lay" id="btnCampus" type="button">
+      我在【<b id="campusName">未选择</b>】园区
+    </button>
+    <p class="progress lay" id="progressText"></p>
+    
+    <div class="track-wrap lay" id="layTrack">
+      <div class="swipe-hint hidden" id="swipeHint">← 左右滑动查看更多 →</div>
+      <section id="track" class="track"></section>
+      <p id="emptyTrack" class="empty hidden">当前园区暂无待打卡点位</p>
+    </div>
+    
+    <section class="grids lay" id="layGrids">
+      <div class="dock">
+        <div class="grids-inner" id="grids"></div>
+      </div>
+    </section>
+    <button class="ticket-btn lay" id="btnTicket" type="button">生成票根</button>
+  </main>
+
+  <div id="sheet" class="sheet hidden">
+    <div class="panel">
+      <button class="icon-btn" id="sheetClose" type="button" aria-label="关闭">×</button>
+      <div class="panel-body" id="panel"></div>
+    </div>
+  </div>
+
+  <!-- 保存图片的全屏浮层 -->
+  <div id="imagePreviewLayer" class="image-preview-layer hidden">
+    <div class="close-icon" id="closeImagePreview">×</div>
+    
+    <img id="imagePreviewImg" src="" alt="长按保存">
+    
+    <div class="tip">手机端请长按上方图片保存</div>
+    <div class="sub-tip">电脑端可点击下方保存按钮</div>
+    
+    <div class="btn-group">
+      <a id="downloadBtn" class="download-btn" download="nicehunt-ticket.png">保存图片到本地</a>
+      <a class="jump-btn" href="https://e.netease.com/community/post/165327" target="_blank">跳转易网</a>
+    </div>
+  </div>
+
+  <canvas id="ticketCanvas" class="hidden"></canvas>
+  <script src="config.js"></script>
+  <script>
+    const EMBEDDED_BOOT = {"ok": true, "activity": {"title": "网易美好捕手", "titleImageUrl": "https://i.imgs.ovh/2026/10/16/0175d1aaa94969aca947ba3ac201f9fd.jpg", "backgroundUrl": "https://i.imgs.ovh/2026/10/16/7ff2d6796e7c4e8cbad168503eb964b2.png", "introVideoUrl": "https://pictureurl.com/api/storage/file?key=u%2Fanon%2F8545ce4f-f0f5-4a7d-8df5-b28212cfb5a8-_______IP_______.mp4", "progressFrameUrl": "https://i.imgs.ovh/2026/10/16/09f7e31dcabb10c4e33f2ab3962e5dd4.png", "playGuide": "【玩法说明预留，后续可在后台修改】\n1. 选择当前所在园区。\n2. 滑动查看可打卡点位，根据谜面前往线下点位。\n3. 扫描点位二维码上传点位照片即可完成打卡。\n4. 完成任意 3 个不同点位后，上传与 Soci 的合照。\n5. 即可生成网易美好四宫格，可前往园区服务台领取惊喜。", "prizeHint": "可前往当前园区服务台领取惊喜奖品，也可保存票根图片分享至易网评论区参与惊喜抽奖。", "sociMeaning": "与 Soci 合照，展现“你是网易美好的重要组成”。", "layout": {"canvas": {"w": 390, "h": 844}, "items": {"title": {"x": 0, "y": 2, "w": 100, "h": 18.6, "hidden": true}, "campus": {"x": 26.6, "y": 20.5, "w": 45.6, "h": 4}, "progress": {"x": 18, "y": 87.7, "w": 64, "h": 3}, "track": {"x": 0, "y": 28.1, "w": 100, "h": 40.4}, "grids": {"x": 10, "y": 71.7, "w": 80, "h": 16}, "ticketBtn": {"x": 27.7, "y": 90.5, "w": 44, "h": 5.5}}}, "rules": {"requiredSpotCount": 3}, "gridLabels": ["捕捉瞬间", "捕捉瞬间", "捕捉瞬间", "与SOCI合照"]}, "campuses": [], "spots": [], "typeRules": [], "ticketTemplate": {}};
+
+    const state = {
+      boot: null,
+      me: null,
+      employeeId: localStorage.getItem("nh_employee_id") || "",
+      pendingSpot: null,
+      entered: false,
+      guideShown: false,
+      showNotesInTicket: true,
+      authCampusId: null,
+    };
+    const $ = (id) => document.getElementById(id);
+    const toast = (msg) => {
+      const el = $("toast");
+      el.textContent = msg;
+      el.classList.remove("hidden");
+      setTimeout(() => el.classList.add("hidden"), 2400);
+    };
+    const esc = (value) => String(value || "").replace(/[&<>"']/g, (ch) => ({
+      "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+    }[ch]));
+
+    function saveMe() {
+      try {
+        if (state.me && state.me.employeeId) {
+          localStorage.setItem("nh_me_" + state.me.employeeId, JSON.stringify(state.me));
+        }
+      } catch (e) {}
+    }
+
+    function recalcProgress() {
+      if (!state.me) return;
+      const required = (state.boot && state.boot.rules && state.boot.rules.requiredSpotCount) || 3;
+      
+      const currentCampusId = state.me.campus ? state.me.campus.id : null;
+      const validSpots = (state.me.completedSpots || []).filter(r => {
+        if (!currentCampusId) return true;
+        const ids = r.spot.campusIds && r.spot.campusIds.length ? r.spot.campusIds : (r.spot.campusId ? [r.spot.campusId] : []);
+        return ids.includes(currentCampusId);
+      });
+
+      const latest = validSpots.slice(-3).reverse();
+      state.me.progress = {
+        completed: validSpots.length,
+        required,
+        unlocked: validSpots.length >= required,
+        latest,
+      };
+    }
+
+    function compressImage(file, maxSize, quality) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const img = new Image();
+          img.onload = () => {
+            let w = img.width, h = img.height;
+            if (w > maxSize || h > maxSize) {
+              const ratio = Math.min(maxSize / w, maxSize / h);
+              w = Math.round(w * ratio);
+              h = Math.round(h * ratio);
+            }
+            const canvas = document.createElement("canvas");
+            canvas.width = w;
+            canvas.height = h;
+            const ctx = canvas.getContext("2d");
+            ctx.drawImage(img, 0, 0, w, h);
+            resolve(canvas.toDataURL("image/jpeg", quality));
+          };
+          img.onerror = () => reject(new Error("图片解析失败"));
+          img.src = reader.result;
+        };
+        reader.onerror = () => reject(new Error("读取失败"));
+        reader.readAsDataURL(file);
+      });
+    }
+
+    function closeSheet() { $("sheet").classList.add("hidden"); }
+    function openSheet(html) {
+      $("panel").innerHTML = html;
+      $("sheet").classList.remove("hidden");
+    }
+
+    function inCampus(spot, campusId) {
+      const ids = spot.campusIds && spot.campusIds.length ? spot.campusIds : (spot.campusId ? [spot.campusId] : []);
+      return ids.includes(campusId);
+    }
+
+    function renderUserBadge() {
+      if (state.me && state.me.userInfo) {
+        $("userBadge").textContent = state.me.userInfo.name;
+        $("userBadge").classList.remove("hidden");
+      } else {
+        $("userBadge").classList.add("hidden");
+      }
+    }
+
+    function renderGrids() {
+      const latest = ((state.me && state.me.progress && state.me.progress.latest) || (state.me && state.me.completedSpots) || []).slice(0, 3);
+      const soci = state.me && state.me.sociPhotoUrl;
+      const frame = state.boot.activity.progressFrameUrl || "";
+      
+      const labels = state.boot.activity.gridLabels || ["捕捉瞬间", "捕捉瞬间", "捕捉瞬间", "与SOCI合照"];
+      
+      let gridHtml = "";
+      
+      // 前三个格子
+      for (let i = 0; i < 3; i++) {
+        const frameImg = `<img class="frame" src="${esc(frame)}" alt="">`;
+        const rec = latest[i];
+        
+        if (rec) {
+          gridHtml += `<button class="grid lit" data-id="${esc(rec.spotId)}">
+               <div class="grid-bg"></div>
+               <img class="photo" src="${esc(rec.photoUrl)}" alt="">
+               ${frameImg}
+             </button>`;
+        } else {
+          gridHtml += `<div class="grid waiting">
+               <div class="grid-bg"></div>
+               ${frameImg}
+               <span class="label">${esc(labels[i] || "")}</span>
+             </div>`;
         }
       }
-    },
-    "gridLabels": [
-      "捕捉瞬间",
-      "捕捉瞬间",
-      "捕捉瞬间",
-      "点击与SOCI合照"
-    ]
-  },
-  "campuses": [
-    {
-      "id": "campus-1792394965005-06jb",
-      "name": "杭州园区",
-      "intro": "",
-      "deskHint": "",
-      "coverUrl": ""
-    },
-    {
-      "id": "campus-1792394965005-itak",
-      "name": "北京园区",
-      "intro": "",
-      "deskHint": "",
-      "coverUrl": ""
-    },
-    {
-      "id": "campus-1792394965005-umit",
-      "name": "上海园区",
-      "intro": "",
-      "deskHint": "",
-      "coverUrl": ""
-    },
-    {
-      "id": "campus-1792394965015-wpyc",
-      "name": "广州园区",
-      "intro": "",
-      "deskHint": "",
-      "coverUrl": ""
-    }
-  ],
-  "rules": {
-    "requiredSpotCount": 3
-  },
-  "spots": [
-    {
-      "id": "spot-1792394965005-xhkh",
-      "name": "喵星人驿站",
-      "campusIds": [
-        "campus-1792394965005-06jb",
-        "campus-1792394965005-itak",
-        "campus-1792394965005-umit"
-      ],
-      "keywords": [
-        "自然",
-        "晨光"
-      ],
-      "intro": "员工自发守护的流浪猫角落",
-      "cardImageUrl": "https://img.remit.ee/i/0HQ1lquwD5Pz",
-      "detailImageUrl": "https://img.remit.ee/i/0HQ1lquwD5Pz",
-      "gridImageUrl": ""
-    },
-    {
-      "id": "spot-1792394965005-m26e",
-      "name": "毛孩子加餐",
-      "campusIds": [
-        "campus-1792394965005-06jb",
-        "campus-1792394965005-itak"
-      ],
-      "keywords": [
-        "水景",
-        "倒影"
-      ],
-      "intro": "食堂早餐把蛋黄留给宠物主人自取",
-      "cardImageUrl": "https://img.remit.ee/i/n1MrvvLhq9h5",
-      "detailImageUrl": "https://img.remit.ee/i/n1MrvvLhq9h5",
-      "gridImageUrl": ""
-    },
-    {
-      "id": "spot-1792394965005-245v",
-      "name": "爱车小披风",
-      "campusIds": [
-        "campus-1792394965005-06jb",
-        "campus-1792394965005-itak"
-      ],
-      "keywords": [],
-      "intro": "行政为户外车辆盖上防晒 / 防雪遮挡板",
-      "cardImageUrl": "https://img.remit.ee/i/gJRLRCgnjG3j",
-      "detailImageUrl": "https://img.remit.ee/i/gJRLRCgnjG3j",
-      "gridImageUrl": ""
-    },
-    {
-      "id": "spot-1792394965005-sulu",
-      "name": "满电角",
-      "campusIds": [
-        "campus-1792394965005-06jb",
-        "campus-1792394965005-itak"
-      ],
-      "keywords": [],
-      "intro": "会议室常备应急充电线 + 手机支架",
-      "cardImageUrl": "https://img.remit.ee/i/VHD3ekla0p9h",
-      "detailImageUrl": "https://img.remit.ee/i/VHD3ekla0p9h",
-      "gridImageUrl": ""
-    },
-    {
-      "id": "spot-1792394965005-vzhn",
-      "name": "雨天守护伞",
-      "campusIds": [
-        "campus-1792394965005-06jb",
-        "campus-1792394965005-itak"
-      ],
-      "keywords": [],
-      "intro": "出入口常备共享雨伞 / 一次性雨衣",
-      "cardImageUrl": "https://img.remit.ee/i/VHD3ekla0p9h",
-      "detailImageUrl": "https://img.remit.ee/i/VHD3ekla0p9h",
-      "gridImageUrl": ""
-    },
-    {
-      "id": "spot-1792394965015-ncpt",
-      "name": "工位小森林",
-      "campusIds": [
-        "campus-1792394965005-06jb",
-        "campus-1792394965005-umit"
-      ],
-      "keywords": [],
-      "intro": "员工自发养护的共享绿植角",
-      "cardImageUrl": "https://img.remit.ee/i/DlL4UtKALqGZ",
-      "detailImageUrl": "https://img.remit.ee/i/DlL4UtKALqGZ",
-      "gridImageUrl": ""
-    },
-    {
-      "id": "spot-1792394965015-fyy9",
-      "name": "能量补给站",
-      "campusIds": [
-        "campus-1792394965005-06jb",
-        "campus-1792394965005-itak"
-      ],
-      "keywords": [],
-      "intro": "楼层饮料机（合作价 or 免费）",
-      "cardImageUrl": "https://img.remit.ee/i/8EdlIN4JIADM",
-      "detailImageUrl": "https://img.remit.ee/i/8EdlIN4JIADM",
-      "gridImageUrl": ""
-    },
-    {
-      "id": "spot-1792394965015-k17p",
-      "name": "新手友好",
-      "campusIds": [
-        "campus-1792394965005-06jb",
-        "campus-1792394965005-itak"
-      ],
-      "keywords": [],
-      "intro": "DAY1干杯！",
-      "cardImageUrl": "https://img.remit.ee/i/kjlAlMGKOofs",
-      "detailImageUrl": "https://img.remit.ee/i/kjlAlMGKOofs",
-      "gridImageUrl": ""
-    },
-    {
-      "id": "spot-1792394965015-lv4m",
-      "name": "满格支持点",
-      "campusIds": [
-        "campus-1792394965005-06jb",
-        "campus-1792394965015-wpyc"
-      ],
-      "keywords": [],
-      "intro": "职能服务中心",
-      "cardImageUrl": "https://img.remit.ee/i/IIeT1p3rigb8",
-      "detailImageUrl": "https://img.remit.ee/i/IIeT1p3rigb8",
-      "gridImageUrl": ""
-    },
-    {
-      "id": "spot-1792394965015-jcdo",
-      "name": "丝滑办公upup",
-      "campusIds": [
-        "campus-1792394965005-06jb",
-        "campus-1792394965005-itak"
-      ],
-      "keywords": [],
-      "intro": "POPO上线新功能 工作更便捷",
-      "cardImageUrl": "https://img.remit.ee/i/DSmuFy6toLqw",
-      "detailImageUrl": "https://img.remit.ee/i/DSmuFy6toLqw",
-      "gridImageUrl": ""
-    }
-  ],
-  "typeRules": [
-    {
-      "id": "type-default",
-      "name": "美好同路人",
-      "keywords": [],
-      "description": "你是网易美好的重要组成部分。",
-      "isDefault": true
-    }
-  ],
-  "ticketTemplate": {
-    "width": 1200,
-    "height": 1800,
-    "frameImageUrl": "https://img.remit.ee/i/33zGExIMlGBk",
-    "slots": [
-      {
-        "key": "photo1",
-        "x": 80,
-        "y": 387,
-        "w": 513,
-        "h": 580,
-        "radius": 12
-      },
-      {
-        "key": "photo2",
-        "x": 640,
-        "y": 387,
-        "w": 492,
-        "h": 577,
-        "radius": 12
-      },
-      {
-        "key": "photo3",
-        "x": 94,
-        "y": 1017,
-        "w": 500,
-        "h": 561,
-        "radius": 12
-      },
-      {
-        "key": "photo4",
-        "x": 640,
-        "y": 1015,
-        "w": 493,
-        "h": 560,
-        "radius": 12
+      
+      // 第四个 SOCI 格子
+      const meFrame = `<img class="frame" src="${esc(frame)}" alt="">`;
+      
+      if (soci) {
+        gridHtml += `<button class="grid lit me-slot" data-kind="soci">
+             <div class="grid-bg"></div>
+             <img class="photo" src="${esc(soci)}" alt="我的照片">
+             ${meFrame}
+           </button>`;
+      } else {
+        gridHtml += `<button class="grid waiting me-slot" data-kind="soci">
+             <div class="grid-bg"></div>
+             ${meFrame}
+             <span class="label">${esc(labels[3] || "")}</span>
+           </button>`;
       }
-    ],
-    "imageUrl": "https://img.remit.ee/i/33zGExIMlGBk",
-    "textMargin": 20
-  }
-};
+      
+      $("grids").innerHTML = gridHtml;
+      $("grids").querySelectorAll("button.grid").forEach((btn) => {
+        btn.onclick = () => {
+          if (btn.dataset.kind === "soci") {
+            showSociSlot();
+          } else {
+            showSpot(btn.dataset.id);
+          }
+        };
+      });
+    }
+
+    function applyLayout() {
+      const layout = (state.boot.activity && state.boot.activity.layout) || {};
+      const items = layout.items || {};
+      const map = {
+        title: $("layTitle"),
+        campus: $("btnCampus"),
+        progress: $("progressText"),
+        track: $("layTrack"),
+        grids: $("layGrids"),
+        ticketBtn: $("btnTicket"),
+      };
+      Object.keys(map).forEach((key) => {
+        const el = map[key];
+        const box = items[key];
+        if (!el) return;
+        if (!box || box.hidden) {
+          el.classList.add("hidden");
+          return;
+        }
+        el.classList.remove("hidden");
+        el.style.left = box.x + "%";
+        el.style.top = box.y + "%";
+        el.style.width = box.w + "%";
+        el.style.height = box.h + "%";
+      });
+    }
+
+    function renderHome() {
+      const boot = state.boot;
+      $("titleImg").src = boot.activity.titleImageUrl;
+      document.body.style.background = `url('${boot.activity.backgroundUrl}') center/cover no-repeat fixed`;
+      
+      recalcProgress(); 
+
+      applyLayout();
+      const campus = state.me && state.me.campus;
+      $("campusName").textContent = campus ? campus.name : "未选择";
+      
+      renderUserBadge();
+      
+      const spots = (state.me.pendingSpots || []).filter((s) => {
+        if (!state.me.campus) return true;
+        const ids = s.campusIds && s.campusIds.length ? s.campusIds : (s.campusId ? [s.campusId] : []);
+        return ids.includes(state.me.campus.id);
+      });
+      
+      const trackEl = $("track");
+      let isDown = false;
+      let startX;
+      let scrollLeft;
+      
+      trackEl.onmousedown = (e) => {
+        isDown = true;
+        trackEl.style.cursor = 'grabbing';
+        startX = e.pageX - trackEl.offsetLeft;
+        scrollLeft = trackEl.scrollLeft;
+      };
+      trackEl.onmouseleave = () => { isDown = false; trackEl.style.cursor = 'grab'; };
+      trackEl.onmouseup = () => { isDown = false; trackEl.style.cursor = 'grab'; };
+      trackEl.onmousemove = (e) => {
+        if (!isDown) return;
+        e.preventDefault();
+        const x = e.pageX - trackEl.offsetLeft;
+        const walk = (x - startX) * 2;
+        trackEl.scrollLeft = scrollLeft - walk;
+      };
+      trackEl.onwheel = (e) => {
+        if (e.deltaY !== 0) {
+          e.preventDefault();
+          trackEl.scrollLeft += e.deltaY;
+        }
+      };
+
+      trackEl.innerHTML = spots.map((s) => `
+        <article class="card ${s.cardImageUrl ? "has-image" : ""}" data-id="${esc(s.id)}">
+          <img src="${esc(s.cardImageUrl)}" alt="${esc(s.name)}">
+        </article>`).join("");
+      
+      // 提示：如果多于1个，则显示提示，2.5秒后自动隐藏
+      const hintEl = $("swipeHint");
+      if (spots.length > 1) {
+        hintEl.classList.remove("hidden");
+        // 如果之前加过动画，为了重复触发，可以先置空
+        hintEl.style.animation = 'none';
+        hintEl.offsetHeight; // 触发重绘
+        hintEl.style.animation = 'fadeSwipe 2.5s ease-in-out forwards';
+      } else {
+        hintEl.classList.add("hidden");
+      }
+
+      $("emptyTrack").classList.toggle("hidden", spots.length > 0);
+      trackEl.classList.toggle("hidden", spots.length === 0);
+      trackEl.querySelectorAll(".card").forEach((el) => {
+        el.onclick = () => showSpot(el.dataset.id);
+      });
+      
+      renderGrids();
+      const btn = $("btnTicket");
+      const layoutHidden = !!(boot.activity.layout && boot.activity.layout.items && boot.activity.layout.items.ticketBtn && boot.activity.layout.items.ticketBtn.hidden);
+      const ready = state.me.progress && state.me.progress.unlocked;
+      if (layoutHidden) btn.classList.add("hidden");
+      else btn.classList.toggle("hidden", !ready);
+      btn.disabled = !ready;
+      btn.textContent = "生成票根";
+    }
+
+    async function ensureId() {
+      if (!state.employeeId) {
+        state.employeeId = localStorage.getItem("nh_employee_id")
+          || (crypto.randomUUID ? crypto.randomUUID() : "u-" + Date.now() + "-" + Math.random().toString(36).slice(2, 8));
+        localStorage.setItem("nh_employee_id", state.employeeId);
+      }
+      const saved = localStorage.getItem("nh_me_" + state.employeeId);
+      if (saved) {
+        try { state.me = JSON.parse(saved); } catch (e) { state.me = null; }
+      }
+      if (!state.me) {
+        state.me = {
+          employeeId: state.employeeId,
+          campus: null,
+          userInfo: null,
+          progress: { completed: 0, required: 3, unlocked: false, latest: [] },
+          pendingSpots: [],
+          completedSpots: [],
+          sociPhotoUrl: "",
+          sociNote: "",
+        };
+      }
+      if (!state.me.completedSpots) state.me.completedSpots = [];
+      if (state.me.sociNote === undefined) state.me.sociNote = "";
+      state.me.pendingSpots = (state.boot.spots || []);
+      
+      recalcProgress();
+      saveMe();
+    }
+
+    function checkAuth() {
+      if (state.me.userInfo && state.me.campus) return false;
+      
+      let selectedCampusId = state.me.campus ? state.me.campus.id : null;
+      
+      const campusOptions = (state.boot.campuses || []).map((c) => `
+        <option value="${esc(c.id)}" ${selectedCampusId === c.id ? 'selected' : ''}>${esc(c.name)}</option>
+      `).join("");
+
+      openSheet(`
+        <h3 style="text-align:center;margin-bottom:20px;">认证捕手</h3>
+        <div class="form-group">
+          <label>姓名 / 昵称</label>
+          <input id="authName" type="text" maxlength="10" placeholder="请输入您的昵称" value="${state.me.userInfo ? state.me.userInfo.name : ''}">
+        </div>
+        <div class="form-group">
+          <label>选择所在园区</label>
+          <select id="authCampus">
+            <option value="" disabled ${!selectedCampusId ? 'selected' : ''}>请选择园区</option>
+            ${campusOptions}
+          </select>
+        </div>
+        <div class="btn-row" style="margin-top:24px;">
+          <button class="primary" id="btnDoAuth" style="width:100%;">认证捕手</button>
+        </div>
+      `);
+
+      $("btnDoAuth").onclick = () => {
+        const name = $("authName").value.trim();
+        const campusId = $("authCampus").value;
+        
+        if (!name) return toast("请输入昵称");
+        if (!campusId) return toast("请选择园区");
+
+        const campus = (state.boot.campuses || []).find(c => c.id === campusId);
+        
+        state.me.userInfo = { name };
+        state.me.campus = campus;
+        saveMe();
+        closeSheet();
+        renderHome();
+        toast("认证成功，开启捕手之旅");
+      };
+      
+      return true; 
+    }
+
+    function showPlayGuide() {
+      if (state.guideShown) return;
+      state.guideShown = true;
+      openSheet(`
+        <h3 style="text-align:center;margin-bottom:10px">活动玩法</h3>
+        <p class="hint">${esc(state.boot.activity.playGuide)}</p>
+        <div class="btn-row"><button class="primary" id="guideOk">我知道了</button></div>
+      `);
+      $("guideOk").onclick = () => {
+        closeSheet();
+        checkAuth(); 
+      };
+    }
+
+    function showCampusPicker(forceHint) {
+      const list = (state.boot.campuses || []).map((c) => `
+        <button class="pick" data-id="${esc(c.id)}">
+          <b>${esc(c.name)}</b>
+        </button>`).join("");
+      openSheet(`
+        <h3 style="text-align:center;margin-bottom:10px">选择园区</h3>
+        ${forceHint ? `<p class="hint" style="text-align:center;">${esc(forceHint)}</p>` : ""}
+        <div class="campus-list">${list || '<p class="hint" style="text-align:center;">暂无可选园区</p>'}</div>
+      `);
+      $("panel").querySelectorAll(".pick").forEach((btn) => {
+        btn.onclick = () => chooseCampus(btn.dataset.id);
+      });
+    }
+
+    async function chooseCampus(campusId, force) {
+      const campus = (state.boot.campuses || []).find((c) => c.id === campusId);
+      if (!campus) { toast("园区不存在"); return; }
+      
+      if (!force && state.me.campus && state.me.campus.id !== campusId && state.me.progress.completed > 0) {
+        openSheet(`
+          <h3 style="text-align:center">切换园区？</h3>
+          <p class="hint" style="text-align:center;">切换园区后，此园区内的已完成进度不会显示，但记录不会丢失。切回原园区即可恢复。</p>
+          <div class="btn-row">
+            <button class="primary" id="forceSwitch">仍要切换</button>
+          </div>
+        `);
+        $("forceSwitch").onclick = () => chooseCampus(campusId, true);
+        return;
+      }
+      state.me.campus = campus;
+      saveMe();
+      closeSheet();
+      renderHome();
+    }
+
+    function spotById(id) {
+      const all = [...((state.me && state.me.pendingSpots) || []), ...((state.me && state.me.completedSpots) || []).map((r) => r.spot)];
+      return all.find((s) => s.id === id);
+    }
+
+    function showSpot(id) {
+      const spot = spotById(id) || state.pendingSpot;
+      if (!spot) return;
+      const campusId = state.me.campus && state.me.campus.id;
+      const mismatch = campusId && !inCampus(spot, campusId);
+      
+      const existingRec = (state.me.completedSpots || []).find(r => r.spotId === id);
+      const oldPhoto = existingRec ? existingRec.photoUrl : "";
+      const oldNote = existingRec ? existingRec.note : "";
+
+      openSheet(`
+        <img class="spot-visual" src="${esc(spot.detailImageUrl)}" alt="${esc(spot.name)}">
+        <h3 class="spot-title">${esc(spot.name)}</h3>
+        <p class="hint spot-intro">${esc(spot.intro || "")}</p>
+        ${mismatch ? `<p class="hint" style="text-align:center">该点位未包含当前园区标签，提交前请确认。</p>` : ""}
+        
+        <div class="upload-area" id="uploadArea">
+          <span id="uploadText" class="${oldPhoto ? 'hidden' : ''}">上传捕捉到的美好</span>
+          <img id="uploadPreview" class="${oldPhoto ? '' : 'hidden'}" src="${esc(oldPhoto)}" alt="预览">
+          <input id="photo" type="file" accept="image/jpeg,image/png,image/webp" capture="environment" style="display:none;">
+        </div>
+        <div class="reupload-tip ${oldPhoto ? '' : 'hidden'}" id="reuploadTip">点击重新上传美好记录</div>
+
+        <textarea id="note" maxlength="10" placeholder="写点什么... (10字以内)">${esc(oldNote)}</textarea>
+        <div class="btn-row" style="justify-content:center;"><button class="primary" id="submitCheckin">提交打卡</button></div>
+      `);
+
+      const uploadArea = $("uploadArea");
+      const photoInput = $("photo");
+      const previewImg = $("uploadPreview");
+      const uploadText = $("uploadText");
+      const reuploadTip = $("reuploadTip");
+
+      uploadArea.onclick = () => photoInput.click();
+      photoInput.onchange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = (ev) => {
+            previewImg.src = ev.target.result;
+            previewImg.classList.remove("hidden");
+            uploadText.classList.add("hidden");
+            reuploadTip.classList.remove("hidden");
+          };
+          reader.readAsDataURL(file);
+        }
+      };
+
+      $("submitCheckin").onclick = () => submitCheckin(spot);
+    }
+
+    async function submitCheckin(spot) {
+      const file = $("photo").files[0];
+      const note = $("note").value;
+      const existingRec = (state.me.completedSpots || []).find(r => r.spotId === spot.id);
+      
+      if (!file && !existingRec) return toast("请先点击虚线框上传照片");
+      
+      if (state.me.campus && !inCampus(spot, state.me.campus.id)) {
+        openSheet(`
+          <h3 style="text-align:center">园区不一致</h3>
+          <p class="hint">当前选择是 ${esc(state.me.campus.name)}，该点位未配置此园区标签。</p>
+          <div class="btn-row"><button class="primary" id="fixCampus">查看点位可去园区</button></div>
+        `);
+        $("fixCampus").onclick = () => showCampusPicker();
+        return;
+      }
+      $("submitCheckin").disabled = true;
+      $("submitCheckin").textContent = "处理中…";
+      try {
+        let dataUrl = existingRec ? existingRec.photoUrl : "";
+        if (file) {
+          dataUrl = await compressImage(file, 1000, 0.72);
+        }
+        
+        const rec = {
+          id: "rec-" + Date.now() + "-" + Math.random().toString(36).slice(2, 8),
+          spotId: spot.id,
+          spot: spot,
+          photoUrl: dataUrl,
+          note: note || "",
+          createdAt: Date.now(),
+        };
+        
+        const list = (state.me.completedSpots || []).filter((r) => r.spotId !== spot.id);
+        list.push(rec);
+        state.me.completedSpots = list;
+        
+        recalcProgress();
+        saveMe();
+        closeSheet();
+        renderHome();
+        toast("打卡信息已更新");
+      } catch (err) {
+        toast("照片处理失败：" + err.message);
+        $("submitCheckin").disabled = false;
+        $("submitCheckin").textContent = "失败，点此重试";
+      }
+    }
+
+    function showSociSlot() {
+      const has = state.me && state.me.sociPhotoUrl;
+      openSheet(`
+        <h3 style="text-align:center">我的照片 / SOCI</h3>
+        <p class="hint" style="text-align:center">${esc(state.boot.activity.sociMeaning)}</p>
+        
+        <div class="upload-area" id="uploadAreaSoci">
+          <span id="uploadTextSoci" class="${has ? 'hidden' : ''}">上传与 SOCI 的合照</span>
+          <img id="uploadPreviewSoci" class="${has ? '' : 'hidden'}" src="${esc(state.me.sociPhotoUrl || '')}" alt="预览">
+          <input id="sociFile" type="file" accept="image/jpeg,image/png,image/webp" capture="environment" style="display:none;">
+        </div>
+        <div class="reupload-tip ${has ? '' : 'hidden'}" id="reuploadTipSoci">点击重新上传美好记录</div>
+        
+        <textarea id="sociNote" maxlength="10" placeholder="写点什么... (10字以内)">${esc(state.me.sociNote || "")}</textarea>
+        <div class="btn-row"><button class="primary" id="submitSoci">${has ? "确认替换" : "上传照片"}</button></div>
+      `);
+
+      const uploadArea = $("uploadAreaSoci");
+      const photoInput = $("sociFile");
+      const previewImg = $("uploadPreviewSoci");
+      const uploadText = $("uploadTextSoci");
+      const reuploadTip = $("reuploadTipSoci");
+
+      uploadArea.onclick = () => photoInput.click();
+      photoInput.onchange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = (ev) => {
+            previewImg.src = ev.target.result;
+            previewImg.classList.remove("hidden");
+            uploadText.classList.add("hidden");
+            reuploadTip.classList.remove("hidden");
+          };
+          reader.readAsDataURL(file);
+        }
+      };
+
+      $("submitSoci").onclick = submitSoci;
+    }
+
+    async function submitSoci() {
+      const file = $("sociFile").files[0];
+      const note = $("sociNote").value;
+      if (!file && !state.me.sociPhotoUrl) return toast("请先选择照片");
+      
+      if (!file && state.me.sociPhotoUrl) {
+        state.me.sociNote = note;
+        saveMe();
+        closeSheet();
+        return;
+      }
+
+      $("submitSoci").disabled = true;
+      $("submitSoci").textContent = "处理中…";
+      try {
+        const dataUrl = await compressImage(file, 1000, 0.72);
+        state.me.sociPhotoUrl = dataUrl;
+        state.me.sociNote = note;
+        saveMe();
+        closeSheet();
+        renderHome();
+        toast("已保存到第 4 格");
+      } catch (err) {
+        toast("照片处理失败：" + err.message);
+        $("submitSoci").disabled = false;
+        $("submitSoci").textContent = "失败，点此重试";
+      }
+    }
+
+    function openTicketFlow() {
+      if (!state.me || !state.me.progress || !state.me.progress.unlocked) {
+        toast("完成任意 3 项打卡后可生成票根");
+        return;
+      }
+      if (!state.me.sociPhotoUrl) {
+        toast("请先上传与 Soci 的合照");
+        showSociSlot();
+        return;
+      }
+      composeFromGrids();
+    }
+
+    function matchTypeRule(latest, typeRules) {
+      const rules = Array.isArray(typeRules) ? typeRules : [];
+      const keywords = new Set();
+      (latest || []).forEach((r) => {
+        (r.spot && r.spot.keywords || []).forEach((k) => keywords.add(k));
+      });
+      let best = null, bestScore = 0;
+      rules.forEach((rule) => {
+        if (rule.isDefault) return;
+        const hits = (rule.keywords || []).filter((k) => keywords.has(k)).length;
+        if (hits > bestScore) { bestScore = hits; best = rule; }
+      });
+      if (best) return { name: best.name, description: best.description };
+      const fallback = rules.find((r) => r.isDefault);
+      if (fallback) return { name: fallback.name, description: fallback.description };
+      return { name: "美好捕手", description: "活动趣味结果，非正式测评" };
+    }
+
+    async function composeFromGrids() {
+      const latest = ((state.me.progress && state.me.progress.latest) || []).slice(0, 3);
+      const photos = latest.map((r) => r.photoUrl);
+      const notes = latest.map((r) => r.note || "");
+      
+      if (state.me.sociPhotoUrl) {
+        photos.push(state.me.sociPhotoUrl);
+        notes.push(state.me.sociNote || "");
+      }
+      
+      const template = state.boot.ticketTemplate || {};
+      $("btnTicket").disabled = true;
+      $("btnTicket").textContent = "生成中…";
+      try {
+        showTypeAndTicket({
+          template: template,
+          ticket: { photos, notes },
+          typeResult: matchTypeRule(latest, state.boot.typeRules),
+          activity: state.boot.activity,
+        });
+      } catch (err) {
+        toast(err.message || "生成失败");
+      } finally {
+        $("btnTicket").disabled = false;
+        $("btnTicket").textContent = "生成票根";
+      }
+    }
+
+    function composeTicketCanvas({ activity, template, photos, notes, showNotes, canvas }) {
+      return new Promise(async (resolve, reject) => {
+        try {
+          const W = Number(template.width) || 1200;
+          const H = Number(template.height) || 1800;
+          canvas.width = W;
+          canvas.height = H;
+          const ctx = canvas.getContext("2d");
+          ctx.fillStyle = "#f3e6cf";
+          ctx.fillRect(0, 0, W, H);
+
+          const loadImage = (src) => new Promise((res, rej) => {
+            const img = new Image();
+            if (!/^data:/.test(src)) img.crossOrigin = "anonymous";
+            img.onload = () => res(img);
+            img.onerror = () => {
+              if (!/^data:/.test(src) && !src.includes('wsrv.nl')) {
+                const proxySrc = `https://wsrv.nl/?url=${encodeURIComponent(src)}`;
+                const img2 = new Image();
+                img2.crossOrigin = "anonymous";
+                img2.onload = () => res(img2);
+                img2.onerror = () => rej(new Error("图片加载失败"));
+                img2.src = proxySrc;
+              } else {
+                rej(new Error("图片加载失败"));
+              }
+            };
+            img.src = src;
+          });
+
+          const drawCover = (img, x, y, w, h, radius) => {
+            ctx.save();
+            const r = Math.min(radius || 0, w / 2, h / 2);
+            ctx.beginPath();
+            ctx.moveTo(x + r, y);
+            ctx.arcTo(x + w, y, x + w, y + h, r);
+            ctx.arcTo(x + w, y + h, x, y + h, r);
+            ctx.arcTo(x, y + h, x, y, r);
+            ctx.arcTo(x, y, x + w, y, r);
+            ctx.closePath();
+            ctx.clip();
+            const scale = Math.max(w / img.width, h / img.height);
+            const dw = img.width * scale;
+            const dh = img.height * scale;
+            ctx.drawImage(img, x + (w - dw) / 2, y + (h - dh) / 2, dw, dh);
+            ctx.restore();
+          };
+
+          const drawTextNote = (text, i, s) => {
+            if (!showNotes || !text) return;
+            
+            const fontSize = Math.round(W / 45); 
+            const margin = Math.round(W / 35);   
+
+            ctx.font = `italic 500 ${fontSize}px "Source Han Sans SC", "Noto Sans SC", "PingFang SC", sans-serif`;
+            
+            const displayText = `“${text}”`;
+            const metrics = ctx.measureText(displayText);
+            const textWidth = metrics.width;
+            const textHeight = fontSize; 
+            
+            let textX, textY;
+            
+            if (i === 0) { 
+              textX = s.x + s.w - textWidth - margin;
+              textY = s.y + s.h - margin;
+            } else if (i === 1) { 
+              textX = s.x + margin;
+              textY = s.y + s.h - margin;
+            } else if (i === 2) { 
+              textX = s.x + s.w - textWidth - margin;
+              textY = s.y + margin + textHeight;
+            } else { 
+              textX = s.x + margin;
+              textY = s.y + margin + textHeight;
+            }
+
+            ctx.save();
+            ctx.fillStyle = "#ffffff";
+            ctx.textBaseline = "bottom";
+            ctx.shadowColor = "rgba(0,0,0,0.8)";
+            ctx.shadowBlur = 6;
+            ctx.shadowOffsetX = 2;
+            ctx.shadowOffsetY = 2;
+            ctx.fillText(displayText, textX, textY);
+            ctx.restore();
+          };
+
+          // 昵称字号放大，位置往上移
+          const drawNickname = () => {
+            if (!showNotes || !state.me.userInfo || !state.me.userInfo.name) return;
+            
+            const fontSize = Math.round(W / 38); 
+            const margin = Math.round(W / 22); 
+
+            ctx.font = `italic 500 ${fontSize}px "Source Han Sans SC", "Noto Sans SC", "PingFang SC", sans-serif`;
+            
+            const displayText = `@${state.me.userInfo.name}`;
+            const metrics = ctx.measureText(displayText);
+            const textWidth = metrics.width;
+            
+            const textX = (W - textWidth) / 2;
+            const textY = H - margin;
+
+            ctx.save();
+            ctx.fillStyle = "#ffffff";
+            ctx.textBaseline = "bottom";
+            ctx.shadowColor = "rgba(0,0,0,0.8)";
+            ctx.shadowBlur = 6;
+            ctx.shadowOffsetX = 2;
+            ctx.shadowOffsetY = 2;
+            ctx.fillText(displayText, textX, textY);
+            ctx.restore();
+          };
+
+          const slots = Array.isArray(template.slots) ? template.slots : [];
+          
+          for (let i = 0; i < slots.length; i++) {
+            const s = slots[i];
+            if (!photos[i]) continue;
+            try {
+              const img = await loadImage(photos[i]);
+              drawCover(img, s.x, s.y, s.w, s.h, s.radius || 12);
+              drawTextNote(notes[i], i, s);
+            } catch (e) { console.warn("照片加载失败", e); }
+          }
+
+          const frameUrl = template.frameImageUrl || template.imageUrl;
+          if (frameUrl && !/placehold\.co/i.test(frameUrl)) {
+            try {
+              const frame = await loadImage(frameUrl);
+              ctx.drawImage(frame, 0, 0, W, H);
+            } catch (e) {
+              console.warn("外框图加载失败", e);
+            }
+          }
+
+          drawNickname(); 
+
+          try {
+            const dataUrl = canvas.toDataURL("image/png");
+            resolve({ url: dataUrl, degraded: false });
+          } catch (e) {
+            if (e.name === 'SecurityError' || e.message.includes('tainted')) {
+              canvas.width = W;
+              canvas.height = H;
+              const ctx2 = canvas.getContext("2d");
+              ctx2.fillStyle = "#f3e6cf";
+              ctx2.fillRect(0, 0, W, H);
+
+              for (let i = 0; i < slots.length; i++) {
+                const s = slots[i];
+                if (!photos[i]) continue;
+                try {
+                  const img = await loadImage(photos[i]);
+                  drawCover(img, s.x, s.y, s.w, s.h, s.radius || 12);
+                  drawTextNote(notes[i], i, s);
+                } catch (err) {}
+              }
+              drawNickname();
+              const dataUrl = canvas.toDataURL("image/png");
+              resolve({ url: dataUrl, degraded: true });
+            } else {
+              reject(new Error("导出图片失败，请截图保存"));
+            }
+          }
+        } catch (err) {
+          reject(err);
+        }
+      });
+    }
+
+    async function showTypeAndTicket(data) {
+      const template = data.template || state.boot.ticketTemplate || {};
+      const typeName = (data.typeResult && data.typeResult.name) || "";
+      const typeDesc = (data.typeResult && data.typeResult.description) || "";
+      
+      toast("正在生成高清票根...");
+
+      try {
+        const res = await composeTicketCanvas({
+          activity: data.activity,
+          template,
+          photos: data.ticket.photos,
+          notes: data.ticket.notes,
+          showNotes: state.showNotesInTicket,
+          canvas: $("ticketCanvas"),
+        });
+
+        $("imagePreviewImg").src = res.url;
+        $("downloadBtn").href = res.url;
+        $("imagePreviewLayer").classList.remove("hidden");
+
+        if (res.degraded) {
+          toast("由于外框图跨域限制，已生成不带外框的图片。");
+        }
+      } catch (err) {
+        toast(err.message || "导出失败，请重试");
+      }
+    }
+
+    async function boot() {
+      const params = new URLSearchParams(location.search);
+      if (params.get("reset") === "1") {
+        localStorage.removeItem("nh_employee_id");
+        for (let i = localStorage.length - 1; i >= 0; i--) {
+          const key = localStorage.key(i);
+          if (key && key.startsWith("nh_me_")) localStorage.removeItem(key);
+        }
+        toast("已重置所有记录");
+        const newParams = new URLSearchParams(location.search);
+        newParams.delete("reset");
+        const newSearch = newParams.toString() ? "?" + newParams.toString() : "";
+        window.history.replaceState(null, "", location.pathname + newSearch);
+      }
+
+      try {
+        state.boot = window.BOOT_CONFIG || EMBEDDED_BOOT;
+        if (!state.boot || !state.boot.activity) throw new Error("配置缺失");
+      } catch (err) {
+        toast(err.message);
+        return;
+      }
+
+      const spotId = params.get("spot");
+      if (spotId) {
+        $("intro").classList.add("hidden");
+        $("app").classList.remove("hidden");
+        enterApp();
+        return;
+      }
+
+      $("intro").classList.remove("hidden");
+      $("app").classList.add("hidden");
+      const video = $("introVideo");
+      const url = state.boot.activity.introVideoUrl;
+      if (url) {
+        video.src = url;
+        video.muted = true;
+        video.loop = false;
+        const play = video.play();
+        if (play && play.catch) play.catch(() => $("introFallback").classList.remove("hidden"));
+        video.onended = () => enterApp();
+        video.onerror = () => $("introFallback").classList.remove("hidden");
+      } else {
+        $("introFallback").classList.remove("hidden");
+      }
+      $("skipIntro").onclick = enterApp;
+    }
+
+    async function enterApp() {
+      if (state.entered) return;
+      state.entered = true;
+      const video = $("introVideo");
+      if (video) {
+        video.onended = null;
+        video.pause();
+      }
+      $("intro").classList.add("hidden");
+      $("app").classList.remove("hidden");
+      try {
+        await ensureId();
+        renderHome();
+        const params = new URLSearchParams(location.search);
+        const spotId = params.get("spot");
+        
+        if (spotId) {
+          const found = (state.boot.spots || []).find((s) => s.id === spotId);
+          if (!found) {
+            toast("点位不存在");
+            if (!state.me.userInfo) checkAuth(); else showPlayGuide();
+            return;
+          }
+          state.pendingSpot = found;
+          if (state.me.campus && !inCampus(found, state.me.campus.id)) {
+            openSheet(`<h3 style="text-align:center">园区不一致</h3><p class="hint">扫码点位未包含当前园区标签。</p><div class="btn-row"><button class="primary" id="goSpot">查看点位</button></div>`);
+            $("goSpot").onclick = () => showSpot(spotId);
+          } else showSpot(spotId);
+        } else {
+          if (!state.me.userInfo) {
+            showPlayGuide();
+          } else {
+            state.guideShown = true; 
+          }
+        }
+      } catch (err) { toast(err.message); }
+    }
+
+    $("btnCampus").onclick = () => {
+      if (!state.me.userInfo) {
+        toast("请先认证捕手");
+        checkAuth();
+        return;
+      }
+      showCampusPicker();
+    };
+    
+    $("btnTicket").onclick = openTicketFlow;
+    $("sheetClose").onclick = closeSheet;
+    $("sheet").onclick = (e) => { if (e.target.id === "sheet") closeSheet(); };
+    
+    $("closeImagePreview").onclick = () => {
+      $("imagePreviewLayer").classList.add("hidden");
+    };
+
+    boot();
+  </script>
+</body>
+</html>
