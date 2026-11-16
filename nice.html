@@ -21,9 +21,9 @@
       color: var(--ink);
       font-family: "PingFang SC","Microsoft YaHei",sans-serif;
     }
-    /* 全屏背景层：仅显示背景图（底图），cover 铺满 */
+    /* 背景层：放在 #app 内部，作为第一个子元素，与 #app 完全重合 */
     #bgLayer {
-      position: fixed;
+      position: absolute;
       inset: 0;
       z-index: 0;
       background-position: center;
@@ -140,17 +140,7 @@
         box-shadow: 0 20px 60px rgba(0,0,0,0.15);
         background-color: var(--paper);
       }
-      /* 电脑端：把背景图裁剪到 #app 区域（通过和 app 对齐的尺寸） */
-      #bgLayer {
-        position: fixed;
-        left: 50%;
-        top: 0;
-        transform: translateX(-50%);
-        height: 100vh;
-        width: auto;
-        aspect-ratio: 390 / 844;
-        inset: auto;
-      }
+      /* bgLayer 已作为 #app 子元素 absolute inset:0，PC 端不需要额外处理 */
     }
     .lay {
       position: absolute;
@@ -471,24 +461,33 @@
     .upload-area span { color: #8c7b66; font-size: 13px; font-weight: 500; }
     .upload-area img { width: 100%; height: 100%; object-fit: contain; display: block; }
 
-    /* 上传区右下角：画画按钮 */
+    /* 上传区右下角：画画按钮（可爱风） */
     .draw-btn {
       position: absolute;
-      right: 6px;
-      bottom: 6px;
-      background: rgba(23, 50, 77, 0.85);
+      right: 8px;
+      bottom: 8px;
+      background: linear-gradient(135deg, #ffb6b9 0%, #ff8fa3 60%, #ff6b85 100%);
       color: #fff;
-      border: 0;
+      border: 2px solid #fff;
       border-radius: 999px;
-      padding: 5px 12px;
+      padding: 6px 14px;
       font-size: 12px;
+      font-weight: 600;
       cursor: pointer;
       z-index: 3;
       display: inline-flex;
       align-items: center;
       gap: 4px;
+      box-shadow: 0 3px 8px rgba(255, 107, 133, 0.35), 0 1px 0 rgba(255,255,255,0.4) inset;
+      letter-spacing: 0.5px;
+      transform-origin: center;
+      animation: drawBtnBounce 2.4s ease-in-out infinite;
     }
-    .draw-btn:active { opacity: 0.85; }
+    .draw-btn:active { transform: scale(0.94); opacity: 0.9; }
+    @keyframes drawBtnBounce {
+      0%, 100% { transform: translateY(0) rotate(-2deg); }
+      50% { transform: translateY(-2px) rotate(2deg); }
+    }
     
     .reupload-tip {
       text-align: center;
@@ -536,19 +535,33 @@
     
     .image-preview-layer img {
       max-width: 100%;
-      max-height: 65vh;
+      max-height: 56vh;
       object-fit: contain;
       border-radius: 8px;
       box-shadow: 0 10px 30px rgba(0,0,0,0.5);
       -webkit-touch-callout: default; 
       user-select: auto;
-      margin-top: 20px;
+      margin-top: 12px;
     }
+    .image-preview-layer .ticket-notice {
+      color: #fff;
+      font-size: 13px;
+      line-height: 1.7;
+      text-align: center;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 12px;
+      padding: 10px 14px;
+      margin: 0 0 4px;
+      max-width: 520px;
+      width: 92%;
+    }
+    .image-preview-layer .ticket-notice b { color: #ffe08a; font-weight: 600; }
     .image-preview-layer .tip {
       color: #fff;
-      font-size: 16px;
+      font-size: 15px;
       font-weight: bold;
-      margin-top: 20px;
+      margin-top: 16px;
       text-align: center;
       text-shadow: 0 1px 2px rgba(0,0,0,0.8);
     }
@@ -740,7 +753,6 @@
   </style>
 </head>
 <body>
-  <div id="bgLayer"></div>
   <div id="toast" class="toast hidden"></div>
   
   <section id="intro" class="cover hidden">
@@ -752,6 +764,7 @@
   </section>
 
   <main id="app">
+    <div id="bgLayer"></div>
     <!-- 顶部在线人数 -->
     <div id="onlineBadge" class="online-badge hidden">
       正有 <span id="onlineCount">0</span> 人正在和你一起寻找美好
@@ -790,11 +803,15 @@
 
   <div id="imagePreviewLayer" class="image-preview-layer hidden">
     <div class="close-icon" id="closeImagePreview">×</div>
+    <div class="ticket-notice">
+      凭本页面可前往<b>各地服务台</b>领取 1 份小礼物<br>
+      也可保存图片，前往易网继续参与<b>惊喜大抽奖</b>
+    </div>
     <img id="imagePreviewImg" src="" alt="长按保存">
     <div class="tip">请长按图片或点击下方按钮保存</div>
     <div class="btn-group">
       <a id="downloadBtn" class="download-btn" download="nicehunt-ticket.png">保存图片到本地</a>
-      <a class="jump-btn" href="https://e.netease.com/community/post/165327" target="_blank">跳转易网</a>
+      <a class="jump-btn" href="https://e.netease.com/community/post/166042" target="_blank">跳转易网 参与抽奖</a>
     </div>
   </div>
 
@@ -1240,13 +1257,15 @@
     const DRAW_COLORS = ["#ff2d55", "#ff9500", "#ffd60a", "#34c759", "#0a84ff", "#5856d6", "#ffffff", "#17324d"];
     const DRAW_SIZES = [3, 6, 12, 20];
     let drawState = {
-      ctx: null, canvas: null,
+      ctx: null, canvas: null,             // 显示用 canvas
+      baseImg: null,                        // 原图 Image 对象（不可修改）
+      layerCanvas: null, layerCtx: null,    // 涂鸦层 offscreen canvas（透明背景）
       drawing: false,
       tool: "pen",
       color: DRAW_COLORS[0],
       size: DRAW_SIZES[1],
       history: [],
-      maxHistory: 20,
+      maxHistory: 25,
       onDone: null,
     };
 
@@ -1289,11 +1308,11 @@
       $("toolUndo").onclick = undoDraw;
       $("toolClear").onclick = () => {
         if (!confirm("清空所有涂鸦？原图保留。")) return;
-        if (drawState.history.length) {
-          const base = drawState.history[0];
-          drawState.history = [base];
-          drawState.ctx.putImageData(base, 0, 0);
-        }
+        drawState.layerCtx.clearRect(0, 0, drawState.layerCanvas.width, drawState.layerCanvas.height);
+        redrawComposite();
+        // 重置历史为"空涂鸦"
+        drawState.history = [];
+        pushHistory();
       };
       $("drawCancel").onclick = closeDrawEditor;
       $("drawDone").onclick = () => {
@@ -1308,21 +1327,36 @@
       };
     }
 
+    // 把 原图 + 涂鸦层 合成到显示 canvas
+    function redrawComposite() {
+      const { ctx, canvas, baseImg, layerCanvas } = drawState;
+      if (!ctx || !canvas) return;
+      ctx.save();
+      ctx.globalCompositeOperation = "source-over";
+      ctx.fillStyle = "#fff";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      if (baseImg) ctx.drawImage(baseImg, 0, 0, canvas.width, canvas.height);
+      if (layerCanvas) ctx.drawImage(layerCanvas, 0, 0);
+      ctx.restore();
+    }
+
     function pushHistory() {
-      const { ctx, canvas, history, maxHistory } = drawState;
+      const { layerCtx, layerCanvas, history, maxHistory } = drawState;
+      if (!layerCtx) return;
       try {
-        const snap = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const snap = layerCtx.getImageData(0, 0, layerCanvas.width, layerCanvas.height);
         history.push(snap);
         if (history.length > maxHistory) history.shift();
       } catch (e) {}
     }
 
     function undoDraw() {
-      const { history, ctx } = drawState;
+      const { history, layerCtx } = drawState;
       if (history.length <= 1) return;
       history.pop();
       const prev = history[history.length - 1];
-      ctx.putImageData(prev, 0, 0);
+      layerCtx.putImageData(prev, 0, 0);
+      redrawComposite();
     }
 
     function openDrawEditor(srcDataUrl, onDone) {
@@ -1349,10 +1383,16 @@
         canvas.height = ch;
         canvas.style.width = cw + "px";
         canvas.style.height = ch + "px";
-        const ctx = drawState.ctx;
-        ctx.fillStyle = "#fff";
-        ctx.fillRect(0, 0, cw, ch);
-        ctx.drawImage(img, 0, 0, cw, ch);
+        drawState.baseImg = img;
+
+        // 创建涂鸦层 offscreen canvas
+        const layer = document.createElement("canvas");
+        layer.width = cw;
+        layer.height = ch;
+        drawState.layerCanvas = layer;
+        drawState.layerCtx = layer.getContext("2d");
+
+        redrawComposite();
         pushHistory();
       };
       img.onerror = () => toast("图片加载失败，无法涂鸦");
@@ -1370,35 +1410,40 @@
           };
         };
         const start = (ev) => {
+          if (!drawState.layerCtx) return;
           ev.preventDefault();
           drawState.drawing = true;
           const p = getPos(ev);
-          const ctx = drawState.ctx;
-          ctx.lineCap = "round";
-          ctx.lineJoin = "round";
-          ctx.lineWidth = drawState.size;
+          const lctx = drawState.layerCtx;
+          lctx.lineCap = "round";
+          lctx.lineJoin = "round";
+          lctx.lineWidth = drawState.size;
           if (drawState.tool === "eraser") {
-            ctx.globalCompositeOperation = "source-over";
-            ctx.strokeStyle = "#ffffff";
-            ctx.lineWidth = drawState.size * 2.5;
+            // 关键：仅在涂鸦层做"抠除"，原图不受影响
+            lctx.globalCompositeOperation = "destination-out";
+            lctx.strokeStyle = "rgba(0,0,0,1)";
+            lctx.lineWidth = drawState.size * 2.5;
           } else {
-            ctx.globalCompositeOperation = "source-over";
-            ctx.strokeStyle = drawState.color;
+            lctx.globalCompositeOperation = "source-over";
+            lctx.strokeStyle = drawState.color;
           }
-          ctx.beginPath();
-          ctx.moveTo(p.x, p.y);
+          lctx.beginPath();
+          lctx.moveTo(p.x, p.y);
         };
         const move = (ev) => {
           if (!drawState.drawing) return;
           ev.preventDefault();
           const p = getPos(ev);
-          drawState.ctx.lineTo(p.x, p.y);
-          drawState.ctx.stroke();
+          drawState.layerCtx.lineTo(p.x, p.y);
+          drawState.layerCtx.stroke();
+          redrawComposite();
         };
         const end = (ev) => {
           if (!drawState.drawing) return;
           drawState.drawing = false;
-          drawState.ctx.closePath();
+          drawState.layerCtx.closePath();
+          // 复位合成模式，方便 getImageData/下次绘制
+          drawState.layerCtx.globalCompositeOperation = "source-over";
           pushHistory();
         };
         canvas.addEventListener("mousedown", start);
@@ -1413,6 +1458,9 @@
     function closeDrawEditor() {
       $("drawEditor").classList.add("hidden");
       drawState.onDone = null;
+      drawState.baseImg = null;
+      drawState.layerCanvas = null;
+      drawState.layerCtx = null;
     }
 
     // ========== /涂鸦编辑器 ==========
@@ -1508,13 +1556,12 @@
           <span id="uploadText" class="${oldPhoto ? 'hidden' : ''}">点击上传捕捉到的美好</span>
           <img id="uploadPreview" class="${oldPhoto ? '' : 'hidden'}" src="${esc(oldPhoto)}" alt="预览">
           <input id="photo" type="file" accept="image/jpeg,image/png,image/webp" capture="environment" style="display:none;">
-          <button type="button" class="draw-btn hidden" id="drawBtn">✏ 画画</button>
+          <button type="button" class="draw-btn hidden" id="drawBtn">🎨 点击涂鸦美好</button>
         </div>
-        <div class="reupload-tip ${oldPhoto ? '' : 'hidden'}" id="reuploadTip">点击重新上传 · 点"画画"可涂鸦</div>
+        <div class="reupload-tip ${oldPhoto ? '' : 'hidden'}" id="reuploadTip">点击重新上传照片</div>
 
         <textarea id="note" class="compact" maxlength="10" placeholder="写点什么... (10字以内)">${esc(oldNote)}</textarea>
         <div class="btn-row" style="justify-content:center;gap:8px;">
-          <button class="ghost" id="backToIntro" style="padding:10px 16px;">返回介绍</button>
           <button class="primary" id="submitCheckin">提交打卡</button>
         </div>
       `);
@@ -1565,7 +1612,6 @@
         });
       };
 
-      $("backToIntro").onclick = () => showSpotIntro(spot);
       $("submitCheckin").onclick = () => submitCheckin(spot, currentDataUrl);
     }
 
@@ -1661,9 +1707,9 @@
           <span id="uploadTextSoci" class="${has ? 'hidden' : ''}">上传与 SOCI 的合照</span>
           <img id="uploadPreviewSoci" class="${has ? '' : 'hidden'}" src="${esc(state.me.sociPhotoUrl || '')}" alt="预览">
           <input id="sociFile" type="file" accept="image/jpeg,image/png,image/webp" capture="environment" style="display:none;">
-          <button type="button" class="draw-btn ${has ? '' : 'hidden'}" id="drawBtnSoci">✏ 画画</button>
+          <button type="button" class="draw-btn ${has ? '' : 'hidden'}" id="drawBtnSoci">🎨 点击涂鸦美好</button>
         </div>
-        <div class="reupload-tip ${has ? '' : 'hidden'}" id="reuploadTipSoci">点击重新上传 · 点"画画"可涂鸦</div>
+        <div class="reupload-tip ${has ? '' : 'hidden'}" id="reuploadTipSoci">点击重新上传照片</div>
 
         <textarea id="sociNote" class="compact" maxlength="10" placeholder="写点什么... (10字以内)">${esc(state.me.sociNote || "")}</textarea>
         <div class="btn-row"><button class="primary" id="submitSoci">${has ? "确认替换" : "上传照片"}</button></div>
@@ -1996,26 +2042,12 @@
           canvas: $("ticketCanvas"),
         });
 
-        // 先弹窗通知，再展示票根图片
-        openSheet(`
-          <h3 style="text-align:center;margin-bottom:12px;">🎁 温馨提示</h3>
-          <p class="hint" style="text-align:center;font-size:14px;line-height:1.8;color:#4b3f31;">
-            凭本页面可前往各地服务台领取 1 份小礼物<br>
-            也可保存图片，前往易网继续参与惊喜大抽奖
-          </p>
-          <div class="btn-row" style="justify-content:center;margin-top:16px;">
-            <button class="primary" id="showTicketImg">查看并保存票根</button>
-          </div>
-        `);
-        $("showTicketImg").onclick = () => {
-          closeSheet();
-          $("imagePreviewImg").src = res.url;
-          $("downloadBtn").href = res.url;
-          $("imagePreviewLayer").classList.remove("hidden");
-          if (res.degraded) {
-            toast("由于外框图跨域限制，已生成不带外框的图片。");
-          }
-        };
+        $("imagePreviewImg").src = res.url;
+        $("downloadBtn").href = res.url;
+        $("imagePreviewLayer").classList.remove("hidden");
+        if (res.degraded) {
+          toast("由于外框图跨域限制，已生成不带外框的图片。");
+        }
       } catch (err) {
         toast(err.message || "导出失败，请重试");
       }
