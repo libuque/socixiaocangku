@@ -2,8 +2,9 @@ window.BOOT_CONFIG = {
   "ok": true,
   "activity": {
     "title": "网易美好捕手",
-    "titleImageUrl": "",
-    "backgroundUrl": "https://img.remit.ee/i/76oDMeNxLvLW",
+    "titleImageUrl": "https://img.remit.ee/i/axEDbOSnMSUA",
+    "characterImageUrl": "https://img.remit.ee/i/hEyfwOSvDJT1",
+    "backgroundUrl": "https://img.remit.ee/i/xWgKdI5RhXru",
     "introVideoUrl": "https://img.remit.ee/i/SG8zKbclfIhP",
     "progressFrameUrl": "https://img.remit.ee/i/rQd9I0wK3pM6",
     "playGuide": "1. 选择当前所在园区。\n2. 滑动查看可打卡点位，根据谜面前往线下点位。\n3. 扫描点位二维码上传点位照片即可完成打卡。\n4. 完成任意 3 个不同点位后，上传与 Soci 的合照。\n5. 即可生成网易美好四宫格，可前往园区服务台领取惊喜。",
@@ -20,7 +21,14 @@ window.BOOT_CONFIG = {
           "y": 2,
           "w": 100,
           "h": 18.6,
-          "hidden": true
+          "hidden": false
+        },
+        "character": {
+          "x": 0,
+          "y": 75.4,
+          "w": 39.2,
+          "h": 24.6,
+          "hidden": false
         },
         "campus": {
           "x": 26.1,
@@ -38,14 +46,14 @@ window.BOOT_CONFIG = {
         },
         "track": {
           "x": 0,
-          "y": 31,
+          "y": 32.8,
           "w": 100,
           "h": 40.4,
           "hidden": false
         },
         "grids": {
-          "x": 10,
-          "y": 75.2,
+          "x": 7.7,
+          "y": 75,
           "w": 80,
           "h": 16,
           "hidden": false
