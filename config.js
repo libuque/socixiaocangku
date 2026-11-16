@@ -18,16 +18,16 @@ window.BOOT_CONFIG = {
       "items": {
         "title": {
           "x": 0,
-          "y": 2,
+          "y": 0,
           "w": 100,
-          "h": 18.6,
+          "h": 100,
           "hidden": false
         },
         "character": {
           "x": 0,
-          "y": 75.4,
-          "w": 39.2,
-          "h": 24.6,
+          "y": 0,
+          "w": 100,
+          "h": 100,
           "hidden": false
         },
         "campus": {
