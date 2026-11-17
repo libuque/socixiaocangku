@@ -168,6 +168,14 @@
     }
     @media (max-width: 767px) {
       body { display: flex; align-items: center; justify-content: center; }
+      body::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        background: var(--paper) var(--mobile-background, none) center / cover no-repeat;
+        pointer-events: none;
+      }
+      #bgLayer { display: none; }
       #app {
         height: min(100dvh, calc(100vw * 844 / 390));
         width: auto;
@@ -1459,6 +1467,7 @@
       // 背景图
       const bgUrl = boot.activity.backgroundUrl || "";
       $("bgLayer").style.backgroundImage = bgUrl ? `url('${bgUrl}')` : "none";
+      document.body.style.setProperty("--mobile-background", bgUrl ? `url('${bgUrl}')` : "none");
 
       recalcProgress();
 
