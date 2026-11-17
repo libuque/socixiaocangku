@@ -105,19 +105,48 @@
 
     .user-badge {
       position: absolute;
-      top: 20px;
-      left: 20px;
+      top: 54px;
+      right: 20px;
       z-index: 10;
-      background: rgba(255,255,255,0.85);
+      background: rgba(255,255,255,0.9);
       backdrop-filter: blur(4px);
-      padding: 6px 14px;
+      padding: 6px 12px;
       border-radius: 999px;
       font-size: 12px;
       font-weight: bold;
       color: var(--teal);
       border: 1px solid rgba(20,125,120,0.2);
       box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      max-width: calc(100% - 40px);
     }
+    .user-badge .uname {
+      color: #17324d;
+      max-width: 80px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .user-badge .sep {
+      opacity: 0.4;
+      font-weight: normal;
+    }
+    .user-badge .cname {
+      max-width: 90px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .user-badge .arrow {
+      font-size: 10px;
+      color: var(--teal);
+      opacity: 0.8;
+      margin-left: 2px;
+    }
+    .user-badge:active { opacity: 0.85; }
     
     #app {
       height: 100%;
@@ -305,6 +334,7 @@
       justify-content: center;
     }
     .ticket-btn {
+      z-index: 4;
       width: 100%;
       height: 100%;
       background: #fff;
@@ -326,10 +356,9 @@
     }
     
     .grid {
-      aspect-ratio: 1;
+      aspect-ratio: 1 / 1;
       border-radius: 0;
       border: 0;
-      position: relative;
       background: transparent;
       overflow: visible;
       font-size: 11px;
@@ -342,22 +371,29 @@
       padding: 0;
       cursor: pointer;
     }
+    /* 作为 .lay 使用时 position 已为 absolute，由 applyLayout 赋 left/top/width/height */
     .grid .grid-bg {
       position: absolute;
-      inset: 10%;
-      width: 80%;
-      height: 80%;
+      top: var(--gi-top, 10%);
+      right: var(--gi-right, 10%);
+      bottom: var(--gi-bottom, 10%);
+      left: var(--gi-left, 10%);
       background: #ffffff;
-      border-radius: 4px;
+      border-radius: var(--gi-radius, 4px);
       z-index: 0;
     }
     .grid .photo {
-      position: absolute; 
-      inset: 10%; 
-      width: 80%; height: 80%;
+      position: absolute;
+      top: var(--gi-top, 10%);
+      left: var(--gi-left, 10%);
+      width: calc(100% - var(--gi-left, 10%) - var(--gi-right, 10%));
+      height: calc(100% - var(--gi-top, 10%) - var(--gi-bottom, 10%));
       object-fit: cover;
+      overflow: hidden;
       background: transparent;
+      border-radius: var(--gi-radius, 4px);
       z-index: 1;
+      pointer-events: none;
     }
     .grid .frame {
       position: absolute; inset: 0;
@@ -371,6 +407,204 @@
     .grid.me-slot .label { font-size: 10px; }
     .grid.lit { animation: bounce .5s ease; }
     @keyframes bounce { 0%{transform:scale(.78)} 60%{transform:scale(1.08)} 100%{transform:scale(1)} }
+
+    /* 票根按钮支持自定义图片 */
+    .ticket-btn.has-img {
+      background: transparent;
+      border: 0;
+      padding: 0;
+      box-shadow: none;
+      overflow: visible;
+    }
+    .ticket-btn.has-img:disabled { opacity: 0.85; }
+    .ticket-btn img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      pointer-events: none;
+      display: block;
+    }
+
+    /* 气泡式点位选择面板（玻璃瓶内漂浮） */
+    .bubble-picker {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 340 / 320;
+      max-height: 76vh;
+      min-height: 280px;
+      margin: 0 auto;
+      overflow: hidden;
+    }
+    /* 玻璃瓶 SVG，铺满整个 picker */
+    .glass-bottle {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 0;
+      filter: drop-shadow(0 10px 24px rgba(23, 50, 77, 0.3));
+    }
+    .bubble-item {
+      position: absolute;
+      border: 0;
+      padding: 0;
+      background: transparent;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      overflow: visible;
+      cursor: pointer;
+      z-index: 2;
+      animation: bubbleFloat 4.5s ease-in-out infinite;
+    }
+    .bubble-photo {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 1;
+      background: #fff;
+      border: 2px solid rgba(229, 248, 252, .9);
+      border-radius: 50%;
+      overflow: hidden;
+      box-shadow:
+        0 6px 14px rgba(23, 50, 77, 0.2),
+        0 0 0 3px rgba(255, 255, 255, 0.85) inset,
+        0 2px 6px rgba(255, 255, 255, 0.6) inset;
+    }
+    .bubble-photo::before {
+      /* 气泡顶部高光，加强"玻璃球"质感 */
+      content: "";
+      position: absolute;
+      top: 8%;
+      left: 15%;
+      width: 28%;
+      height: 24%;
+      border-radius: 50%;
+      background: radial-gradient(ellipse at center, rgba(255,255,255,0.9), rgba(255,255,255,0));
+      pointer-events: none;
+      z-index: 3;
+    }
+    .bubble-item:active { transform: scale(0.92); }
+    .bubble-photo img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      background: #fcf9f3;
+    }
+    .bubble-item .bubble-caption {
+      position: relative;
+      z-index: 3;
+      display: block;
+      width: 100%;
+      margin-top: -10px;
+      padding: 4px 3px;
+      border: 1px solid rgba(255, 220, 211, .85);
+      border-radius: 999px;
+      font-size: clamp(9px, 2.5vw, 12px);
+      line-height: 1.2;
+      font-weight: 700;
+      color: #fff;
+      background: #b93237;
+      box-shadow: 0 3px 7px rgba(103, 34, 34, .24);
+      text-align: center;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .bubble-item.taken {
+      opacity: 0.4;
+      cursor: not-allowed;
+      animation: none;
+    }
+    .bubble-item.taken .bubble-photo::after {
+      content: "已选";
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-size: 11px;
+      font-weight: bold;
+      background: rgba(0,0,0,0.35);
+      z-index: 4;
+    }
+    @keyframes bubbleFloat {
+      0%, 100% { transform: translateY(0); }
+      50%      { transform: translateY(-1px); }
+    }
+    /* 小气泡装饰：瓶子内随机冒泡泡 */
+    .glass-sparkle {
+      position: absolute;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.55);
+      box-shadow: 0 0 0 1px rgba(255,255,255,0.3);
+      pointer-events: none;
+      z-index: 1;
+      animation: sparkleRise 6s ease-in infinite;
+    }
+    @keyframes sparkleRise {
+      0% { transform: translateY(20px); opacity: 0; }
+      20% { opacity: 1; }
+      100% { transform: translateY(-120px); opacity: 0; }
+    }
+
+    /* 便签 wish 样式 */
+    .wish-note {
+      position: relative;
+      background: linear-gradient(135deg, #fff8c0 0%, #ffe580 100%);
+      border-radius: 6px;
+      padding: 24px 20px 16px;
+      box-shadow: 0 16px 40px rgba(0,0,0,0.22), 0 3px 8px rgba(0,0,0,0.1);
+      transform: rotate(-1.5deg);
+      margin: 8px auto;
+      width: min(86vw, 390px);
+      height: min(42vh, 330px);
+      display: flex;
+      flex-direction: column;
+    }
+    .wish-note::before {
+      content: "";
+      position: absolute;
+      top: -8px;
+      left: 50%;
+      transform: translateX(-50%) rotate(-3deg);
+      width: 86px;
+      height: 20px;
+      background: rgba(239, 165, 90, 0.55);
+      border-radius: 2px;
+    }
+    .wish-note h4 {
+      text-align: center;
+      font-size: 19px;
+      color: #6b4a1a;
+      margin-bottom: 10px;
+      font-weight: bold;
+    }
+    .wish-note textarea {
+      width: 100%;
+      flex: 1;
+      min-height: 60px;
+      border: 0;
+      background: transparent;
+      resize: none;
+      text-align: center;
+      font-family: "Caveat", "PingFang SC", cursive;
+      font-size: 22px;
+      color: #4b3010;
+      padding: 4px;
+      outline: none;
+      line-height: 1.5;
+    }
+    .wish-note .wish-counter {
+      text-align: right;
+      font-size: 11px;
+      color: #8a6a2a;
+      margin-top: 4px;
+    }
+    .wish-note .btn-row { flex: 0 0 auto; margin-top: 14px; }
 
     /* 一次性悬浮提示 */
     .bubble-tip {
@@ -427,6 +661,43 @@
       flex-direction: column;
     }
     .panel-body { overflow: auto; flex: 1; }
+
+    /* 透明玻璃面板（选点位用） */
+    .panel.panel-glass {
+      width: min(98vw, 540px);
+      background: transparent;
+      border-radius: 0;
+      padding: 28px 4px 4px;
+      max-height: 94vh;
+      box-shadow: none;
+      overflow: visible;
+    }
+    .panel.panel-glass .panel-body {
+      overflow: visible;
+    }
+    .panel.panel-glass .icon-btn {
+      background: rgba(255, 255, 255, 0.85);
+      color: var(--ink);
+      top: -4px;
+      right: -4px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+    }
+    .panel.panel-wish { width: min(98vw, 480px); }
+    .panel.panel-wish .icon-btn { top: 0; right: 0; }
+    .panel-glass .picker-title {
+      color: #fff;
+      text-align: center;
+      margin: 0 0 6px;
+      text-shadow: 0 2px 6px rgba(0,0,0,0.55);
+      font-size: 17px;
+    }
+    .panel-glass .picker-hint {
+      color: rgba(255,255,255,0.88);
+      text-align: center;
+      margin: 0 0 8px;
+      font-size: 12px;
+      text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+    }
     .icon-btn {
       position: absolute; top: 10px; right: 10px;
       width: 32px; height: 32px; border-radius: 50%;
@@ -450,6 +721,7 @@
       border: 2px dashed #d1c4b0;
       border-radius: 12px;
       display: flex;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
       background: #fcf9f3;
@@ -457,15 +729,25 @@
       overflow: hidden;
       position: relative;
       margin: 8px auto 4px;
+      gap: 6px;
+    }
+    .upload-area .camera-icon {
+      width: 42px;
+      height: 42px;
+      color: #c4ac87;
+      flex: 0 0 auto;
+      opacity: 0.95;
     }
     .upload-area span { color: #8c7b66; font-size: 13px; font-weight: 500; }
     .upload-area img { width: 100%; height: 100%; object-fit: contain; display: block; }
+    /* 当已有预览时，隐藏相机图标 */
+    .upload-area:has(img:not(.hidden)) .camera-icon { display: none; }
 
-    /* 上传区右下角：画画按钮（可爱风） */
+    /* 上传区右上角：画画按钮（可爱风） */
     .draw-btn {
       position: absolute;
       right: 8px;
-      bottom: 8px;
+      top: 8px;
       background: linear-gradient(135deg, #ffb6b9 0%, #ff8fa3 60%, #ff6b85 100%);
       color: #fff;
       border: 2px solid #fff;
@@ -480,14 +762,8 @@
       gap: 4px;
       box-shadow: 0 3px 8px rgba(255, 107, 133, 0.35), 0 1px 0 rgba(255,255,255,0.4) inset;
       letter-spacing: 0.5px;
-      transform-origin: center;
-      animation: drawBtnBounce 2.4s ease-in-out infinite;
     }
     .draw-btn:active { transform: scale(0.94); opacity: 0.9; }
-    @keyframes drawBtnBounce {
-      0%, 100% { transform: translateY(0) rotate(-2deg); }
-      50% { transform: translateY(-2px) rotate(2deg); }
-    }
     
     .reupload-tip {
       text-align: center;
@@ -623,13 +899,18 @@
     .spot-intro-full {
       text-align: center;
       font-size: 14px;
-      line-height: 1.7;
+      line-height: 1.75;
       color: #4b3f31;
       padding: 0 4px;
       margin: 10px auto 14px;
       max-height: 42vh;
       overflow-y: auto;
     }
+    .spot-intro-full a { color: var(--teal); text-decoration: underline; }
+    .spot-intro-full b, .spot-intro-full strong { color: #2d2114; }
+    .spot-intro-full h3 { font-size: 15px; margin: 8px 0 4px; color: var(--teal); }
+    .spot-intro-full ul, .spot-intro-full ol { text-align: left; padding-left: 22px; margin: 4px 0; }
+    .spot-intro-full p { margin: 4px 0; }
 
     /* 紧凑文本框 */
     textarea.compact {
@@ -773,25 +1054,37 @@
 
     <header class="hero lay" id="layTitle"><img id="titleImg" alt="活动主题" /></header>
     <div class="lay" id="layCharacter"><img id="characterImg" alt="人物" /></div>
-    <button class="campus-chip lay" id="btnCampus" type="button">
+    <button class="campus-chip lay hidden" id="btnCampus" type="button">
       我在【<b id="campusName">未选择</b>】园区
     </button>
     <p class="progress lay" id="progressText"></p>
-    
-    <div class="track-wrap lay" id="layTrack">
-      <div class="swipe-hint hidden" id="swipeHint">← 左右滑动查看更多 →</div>
-      <button class="track-arrow left hidden" id="trackPrev" type="button" aria-label="上一个">‹</button>
-      <section id="track" class="track"></section>
-      <button class="track-arrow right hidden" id="trackNext" type="button" aria-label="下一个">›</button>
-      <p id="emptyTrack" class="empty hidden">当前园区暂无待打卡点位</p>
-    </div>
-    
-    <section class="grids lay" id="layGrids">
-      <div class="dock">
-        <div class="grids-inner" id="grids"></div>
-      </div>
-    </section>
-    <button class="ticket-btn lay" id="btnTicket" type="button">生成票根</button>
+
+    <!-- 4 个独立打卡格（每个格子布局独立，支持后台自定义位置） -->
+    <button class="grid lay" id="gridSlot0" data-slot="0" type="button">
+      <div class="grid-bg"></div>
+      <img class="frame" alt="">
+      <span class="label"></span>
+    </button>
+    <button class="grid lay" id="gridSlot1" data-slot="1" type="button">
+      <div class="grid-bg"></div>
+      <img class="frame" alt="">
+      <span class="label"></span>
+    </button>
+    <button class="grid lay" id="gridSlot2" data-slot="2" type="button">
+      <div class="grid-bg"></div>
+      <img class="frame" alt="">
+      <span class="label"></span>
+    </button>
+    <button class="grid lay me-slot" id="gridSlot3" data-slot="3" type="button">
+      <div class="grid-bg"></div>
+      <img class="frame" alt="">
+      <span class="label"></span>
+    </button>
+
+    <button class="ticket-btn lay" id="btnTicket" type="button">
+      <img id="ticketBtnImg" class="hidden" alt="生成票根">
+      <span id="ticketBtnText">生成票根</span>
+    </button>
   </main>
 
   <div id="sheet" class="sheet hidden">
@@ -913,19 +1206,24 @@
     function recalcProgress() {
       if (!state.me) return;
       const required = (state.boot && state.boot.rules && state.boot.rules.requiredSpotCount) || 3;
-      
+      const slots = state.me.gridSlots || [null, null, null];
       const currentCampusId = state.me.campus ? state.me.campus.id : null;
-      const validSpots = (state.me.completedSpots || []).filter(r => {
+
+      // 只统计当前园区的格子（没有园区就全算）
+      const validSlots = slots.filter((rec) => {
+        if (!rec) return false;
         if (!currentCampusId) return true;
-        const ids = r.spot.campusIds && r.spot.campusIds.length ? r.spot.campusIds : (r.spot.campusId ? [r.spot.campusId] : []);
+        const ids = rec.spot && rec.spot.campusIds && rec.spot.campusIds.length
+          ? rec.spot.campusIds
+          : (rec.spot && rec.spot.campusId ? [rec.spot.campusId] : []);
         return ids.includes(currentCampusId);
       });
 
-      const latest = validSpots.slice(-3).reverse();
+      const latest = validSlots.slice(0, 3);
       state.me.progress = {
-        completed: validSpots.length,
+        completed: validSlots.length,
         required,
-        unlocked: validSpots.length >= required,
+        unlocked: validSlots.length >= required,
         latest,
       };
     }
@@ -957,9 +1255,20 @@
       });
     }
 
-    function closeSheet() { $("sheet").classList.add("hidden"); }
-    function openSheet(html) {
+    function closeSheet() {
+      $("sheet").classList.add("hidden");
+      // 关闭时去掉透明 glass 态
+      const panelEl = $("sheet").querySelector(".panel");
+      if (panelEl) panelEl.classList.remove("panel-glass", "panel-wish");
+    }
+    function openSheet(html, options) {
+      options = options || {};
       $("panel").innerHTML = html;
+      const panelEl = $("sheet").querySelector(".panel");
+      if (panelEl) {
+        panelEl.classList.toggle("panel-glass", !!options.glass);
+        panelEl.classList.toggle("panel-wish", !!options.wish);
+      }
       $("sheet").classList.remove("hidden");
     }
 
@@ -969,77 +1278,87 @@
     }
 
     function renderUserBadge() {
-      if (state.me && state.me.userInfo) {
-        $("userBadge").textContent = state.me.userInfo.name;
-        $("userBadge").classList.remove("hidden");
-      } else {
-        $("userBadge").classList.add("hidden");
+      const ub = $("userBadge");
+      if (!state.me || !state.me.userInfo) {
+        ub.classList.add("hidden");
+        ub.innerHTML = "";
+        return;
       }
+      const name = state.me.userInfo.name || "";
+      const campusName = state.me.campus ? state.me.campus.name : "未选择";
+      ub.innerHTML = `
+        <span class="uname">${esc(name)}</span>
+        <span class="sep">·</span>
+        <span class="cname">${esc(campusName)}</span>
+        <span class="arrow">▼</span>
+      `;
+      ub.classList.remove("hidden");
     }
 
     function renderGrids() {
-      const latest = ((state.me && state.me.progress && state.me.progress.latest) || (state.me && state.me.completedSpots) || []).slice(0, 3);
+      const slots = state.me.gridSlots || [null, null, null];
       const soci = state.me && state.me.sociPhotoUrl;
       const frame = state.boot.activity.progressFrameUrl || "";
-      
       const labels = state.boot.activity.gridLabels || ["捕捉瞬间", "捕捉瞬间", "捕捉瞬间", "与SOCI合照"];
-      
-      let gridHtml = "";
-      
-      for (let i = 0; i < 3; i++) {
-        const frameImg = `<img class="frame" src="${esc(frame)}" alt="">`;
-        const rec = latest[i];
-        const tipHtml = (rec && !state.hasShownReupload) ? `<div class="bubble-tip">点击可重新上传</div>` : "";
-        
-        if (rec) {
-          gridHtml += `<button class="grid lit" data-id="${esc(rec.spotId)}">
-               <div class="grid-bg"></div>
-               <img class="photo" src="${esc(rec.photoUrl)}" alt="">
-               ${frameImg}
-               ${tipHtml}
-             </button>`;
+
+      const renderSlot = (idx, rec) => {
+        const el = $("gridSlot" + idx);
+        if (!el) return;
+        const label = labels[idx] || "";
+        const old = el.querySelector(".photo");
+        if (old) old.remove();
+        const oldTip = el.querySelector(".bubble-tip");
+        if (oldTip) oldTip.remove();
+
+        const frameEl = el.querySelector(".frame");
+        if (frameEl) frameEl.src = frame;
+
+        const labelEl = el.querySelector(".label");
+
+        if (rec && rec.photoUrl) {
+          // 已打卡
+          el.classList.add("lit");
+          el.classList.remove("waiting");
+          const img = document.createElement("img");
+          img.className = "photo";
+          img.src = rec.photoUrl;
+          img.alt = "";
+          el.insertBefore(img, frameEl);
+          if (labelEl) labelEl.textContent = "";
+          if (!state.hasShownReupload) {
+            const tip = document.createElement("div");
+            tip.className = "bubble-tip";
+            tip.textContent = "点击可更换";
+            el.appendChild(tip);
+          }
         } else {
-          gridHtml += `<div class="grid waiting">
-               <div class="grid-bg"></div>
-               ${frameImg}
-               <span class="label">${esc(labels[i] || "")}</span>
-             </div>`;
+          el.classList.remove("lit");
+          el.classList.add("waiting");
+          if (labelEl) labelEl.textContent = label;
         }
-      }
-      
-      const meFrame = `<img class="frame" src="${esc(frame)}" alt="">`;
-      const tipHtmlMe = (soci && !state.hasShownReupload) ? `<div class="bubble-tip">点击可重新上传</div>` : "";
-      
-      if (soci) {
-        gridHtml += `<button class="grid lit me-slot" data-kind="soci">
-             <div class="grid-bg"></div>
-             <img class="photo" src="${esc(soci)}" alt="我的照片">
-             ${meFrame}
-             ${tipHtmlMe}
-           </button>`;
-      } else {
-        gridHtml += `<button class="grid waiting me-slot" data-kind="soci">
-             <div class="grid-bg"></div>
-             ${meFrame}
-             <span class="label">${esc(labels[3] || "")}</span>
-           </button>`;
-      }
-      
-      if ((latest.length > 0 || soci) && !state.hasShownReupload) {
+      };
+
+      renderSlot(0, slots[0]);
+      renderSlot(1, slots[1]);
+      renderSlot(2, slots[2]);
+
+      // slot 3：SOCI
+      renderSlot(3, soci ? { photoUrl: soci } : null);
+      // 保证 slot3 有 me-slot class（HTML 已有，这里兜底）
+      $("gridSlot3").classList.add("me-slot");
+
+      const hasAny = !!(slots.some(Boolean) || soci);
+      if (hasAny && !state.hasShownReupload) {
         state.hasShownReupload = true;
         localStorage.setItem("nh_has_shown_reupload", "1");
       }
 
-      $("grids").innerHTML = gridHtml;
-      $("grids").querySelectorAll("button.grid").forEach((btn) => {
-        btn.onclick = () => {
-          if (btn.dataset.kind === "soci") {
-            showSociSlot();
-          } else {
-            showSpot(btn.dataset.id);
-          }
-        };
+      // 绑定点击
+      [0, 1, 2].forEach((i) => {
+        const btn = $("gridSlot" + i);
+        btn.onclick = () => openSlotPicker(i);
       });
+      $("gridSlot3").onclick = () => showSociSlot();
     }
 
     function applyLayout() {
@@ -1050,10 +1369,14 @@
         character: $("layCharacter"),
         campus: $("btnCampus"),
         progress: $("progressText"),
-        track: $("layTrack"),
-        grids: $("layGrids"),
+        grid0: $("gridSlot0"),
+        grid1: $("gridSlot1"),
+        grid2: $("gridSlot2"),
+        grid3: $("gridSlot3"),
         ticketBtn: $("btnTicket"),
       };
+      // 打卡格强制正方形：只设 width，height 由 aspect-ratio 决定
+      const gridKeys = { grid0: 1, grid1: 1, grid2: 1, grid3: 1 };
       Object.keys(map).forEach((key) => {
         const el = map[key];
         const box = items[key];
@@ -1066,8 +1389,62 @@
         el.style.left = box.x + "%";
         el.style.top = box.y + "%";
         el.style.width = box.w + "%";
-        el.style.height = box.h + "%";
+        if (gridKeys[key]) {
+          // 高度由 aspect-ratio: 1/1 控制，照片不会超出框
+          el.style.height = "auto";
+        } else {
+          el.style.height = box.h + "%";
+        }
       });
+    }
+
+    function parseInset(val) {
+      // 支持: 数字、"10"、"10 15 10 15"、"10 15"
+      const DEF = { top: 15, right: 15, bottom: 15, left: 15 };
+      if (val === undefined || val === null || val === "") {
+        return { ...DEF };
+      }
+      const parts = String(val).trim().split(/\s+/).map(Number).filter((n) => !Number.isNaN(n));
+      if (parts.length === 1) {
+        return { top: parts[0], right: parts[0], bottom: parts[0], left: parts[0] };
+      }
+      if (parts.length === 2) {
+        return { top: parts[0], right: parts[1], bottom: parts[0], left: parts[1] };
+      }
+      if (parts.length === 3) {
+        return { top: parts[0], right: parts[1], bottom: parts[2], left: parts[1] };
+      }
+      if (parts.length >= 4) {
+        return { top: parts[0], right: parts[1], bottom: parts[2], left: parts[3] };
+      }
+      return { ...DEF };
+    }
+
+    function applyGridInset() {
+      const act = state.boot.activity || {};
+      const inset = parseInset(act.gridInnerInset);
+      const radius = parseRadius(act.gridInnerShape);
+      ["gridSlot0", "gridSlot1", "gridSlot2", "gridSlot3"].forEach((id) => {
+        const el = $(id);
+        if (!el) return;
+        el.style.setProperty("--gi-top", inset.top + "%");
+        el.style.setProperty("--gi-right", inset.right + "%");
+        el.style.setProperty("--gi-bottom", inset.bottom + "%");
+        el.style.setProperty("--gi-left", inset.left + "%");
+        el.style.setProperty("--gi-radius", radius);
+      });
+    }
+
+    function parseRadius(val) {
+      if (val === undefined || val === null || val === "") return "4px";
+      const s = String(val).trim().toLowerCase();
+      if (s === "circle" || s === "round" || s === "圆" || s === "圆形") return "50%";
+      if (s === "rounded" || s === "圆角") return "14px";
+      if (s === "square" || s === "方形" || s === "0") return "0";
+      // 纯数字按 px
+      if (/^\d+(\.\d+)?$/.test(s)) return s + "px";
+      // 已经含单位 / %
+      return s;
     }
 
     function renderHome() {
@@ -1076,100 +1453,42 @@
       // 人物层
       const charUrl = boot.activity.characterImageUrl || "";
       if (charUrl) $("characterImg").src = charUrl;
-      // 背景图：改用独立 #bgLayer（PC 端可被限制在 #app 内）
+      // 背景图
       const bgUrl = boot.activity.backgroundUrl || "";
       $("bgLayer").style.backgroundImage = bgUrl ? `url('${bgUrl}')` : "none";
 
       recalcProgress();
 
       applyLayout();
-      // applyLayout 后若人物图 URL 为空，强制隐藏人物层
+      applyGridInset();
       if (!charUrl) $("layCharacter").classList.add("hidden");
+      // 账号和园区已合并到右上角 userBadge，无需再显示原胶囊按钮
+      $("btnCampus").classList.add("hidden");
       const campus = state.me && state.me.campus;
       $("campusName").textContent = campus ? campus.name : "未选择";
-      
+
       renderUserBadge();
-      
-      const spots = (state.me.pendingSpots || []).filter((s) => {
-        if (!state.me.campus) return true;
-        const ids = s.campusIds && s.campusIds.length ? s.campusIds : (s.campusId ? [s.campusId] : []);
-        return ids.includes(state.me.campus.id);
-      });
-      
-      const trackEl = $("track");
-      let isDown = false;
-      let startX;
-      let scrollLeft;
-      
-      trackEl.onmousedown = (e) => {
-        isDown = true;
-        trackEl.style.cursor = 'grabbing';
-        startX = e.pageX - trackEl.offsetLeft;
-        scrollLeft = trackEl.scrollLeft;
-      };
-      trackEl.onmouseleave = () => { isDown = false; trackEl.style.cursor = 'grab'; };
-      trackEl.onmouseup = () => { isDown = false; trackEl.style.cursor = 'grab'; };
-      trackEl.onmousemove = (e) => {
-        if (!isDown) return;
-        e.preventDefault();
-        const x = e.pageX - trackEl.offsetLeft;
-        const walk = (x - startX) * 2;
-        trackEl.scrollLeft = scrollLeft - walk;
-      };
-      trackEl.onwheel = (e) => {
-        if (e.deltaY !== 0) {
-          e.preventDefault();
-          trackEl.scrollLeft += e.deltaY;
-        }
-      };
-
-      trackEl.innerHTML = spots.map((s) => `
-        <article class="card ${s.cardImageUrl ? "has-image" : ""}" data-id="${esc(s.id)}">
-          <img src="${esc(s.cardImageUrl)}" alt="${esc(s.name)}">
-        </article>`).join("");
-      
-      const hintEl = $("swipeHint");
-      if (spots.length > 1 && !state.hasShownSwipe) {
-        hintEl.classList.remove("hidden");
-        hintEl.style.animation = 'none';
-        hintEl.offsetHeight;
-        hintEl.style.animation = 'fadeSwipe 2.5s ease-in-out forwards';
-        state.hasShownSwipe = true;
-        localStorage.setItem("nh_has_shown_swipe", "1");
-      } else {
-        hintEl.classList.add("hidden");
-      }
-
-      $("emptyTrack").classList.toggle("hidden", spots.length > 0);
-      trackEl.classList.toggle("hidden", spots.length === 0);
-      trackEl.querySelectorAll(".card").forEach((el) => {
-        el.onclick = () => showSpot(el.dataset.id);
-      });
-
-      // 左右箭头
-      const prevBtn = $("trackPrev");
-      const nextBtn = $("trackNext");
-      const showArrows = spots.length > 1;
-      prevBtn.classList.toggle("hidden", !showArrows);
-      nextBtn.classList.toggle("hidden", !showArrows);
-      if (showArrows) {
-        const scrollByCard = (dir) => {
-          const firstCard = trackEl.querySelector(".card");
-          const step = firstCard ? (firstCard.getBoundingClientRect().width + 12) : (trackEl.clientWidth * 0.8);
-          trackEl.scrollBy({ left: dir * step, behavior: "smooth" });
-        };
-        prevBtn.onclick = () => scrollByCard(-1);
-        nextBtn.onclick = () => scrollByCard(1);
-      }
-
       renderGrids();
+
+      // 票根按钮：支持自定义图片
       const btn = $("btnTicket");
+      const btnImg = $("ticketBtnImg");
+      const btnText = $("ticketBtnText");
+      const ticketBtnImgUrl = boot.activity.ticketBtnImageUrl || "";
+      if (ticketBtnImgUrl) {
+        btn.classList.add("has-img");
+        btnImg.src = ticketBtnImgUrl;
+        btnImg.classList.remove("hidden");
+        btnText.classList.add("hidden");
+      } else {
+        btn.classList.remove("has-img");
+        btnImg.classList.add("hidden");
+        btnText.classList.remove("hidden");
+        btnText.textContent = "生成票根";
+      }
       const layoutHidden = !!(boot.activity.layout && boot.activity.layout.items && boot.activity.layout.items.ticketBtn && boot.activity.layout.items.ticketBtn.hidden);
-      const ready = state.me.progress && state.me.progress.unlocked;
-      if (layoutHidden) btn.classList.add("hidden");
-      else btn.classList.toggle("hidden", !ready);
-      btn.disabled = !ready;
-      btn.textContent = "生成票根";
+      btn.classList.toggle("hidden", layoutHidden);
+      btn.disabled = false;
     }
 
     async function ensureId() {
@@ -1190,12 +1509,37 @@
           progress: { completed: 0, required: 3, unlocked: false, latest: [] },
           pendingSpots: [],
           completedSpots: [],
+          gridSlots: [null, null, null],
           sociPhotoUrl: "",
           sociNote: "",
+          wish: "",
         };
       }
       if (!state.me.completedSpots) state.me.completedSpots = [];
+      if (!Array.isArray(state.me.gridSlots) || state.me.gridSlots.length !== 3) {
+        state.me.gridSlots = [null, null, null];
+        // 迁移：如果老用户有 completedSpots，取最近 3 条填入格子
+        const recent = (state.me.completedSpots || []).slice(-3);
+        for (let i = 0; i < recent.length && i < 3; i++) {
+          state.me.gridSlots[i] = recent[i];
+        }
+      }
+      // Preserve existing check-ins when upgrading to campus-specific slots.
+      if (!state.me.gridSlotsByCampus) {
+        state.me.gridSlotsByCampus = {};
+        (state.boot.campuses || []).forEach((campus) => {
+          const slots = [null, null, null];
+          state.me.gridSlots.forEach((rec, index) => {
+            if (rec && rec.spot && inCampus(rec.spot, campus.id)) slots[index] = rec;
+          });
+          if (slots.some(Boolean)) state.me.gridSlotsByCampus[campus.id] = slots;
+        });
+      }
+      if (state.me.campus) {
+        state.me.gridSlots = state.me.gridSlotsByCampus[state.me.campus.id] || [null, null, null];
+      }
       if (state.me.sociNote === undefined) state.me.sociNote = "";
+      if (state.me.wish === undefined) state.me.wish = "";
       state.me.pendingSpots = (state.boot.spots || []);
       
       recalcProgress();
@@ -1510,6 +1854,8 @@
         return;
       }
       state.me.campus = campus;
+      state.me.gridSlotsByCampus = state.me.gridSlotsByCampus || {};
+      state.me.gridSlots = state.me.gridSlotsByCampus[campusId] || [null, null, null];
       saveMe();
       closeSheet();
       renderHome();
@@ -1520,39 +1866,214 @@
       return all.find((s) => s.id === id);
     }
 
-    function showSpot(id) {
-      const spot = spotById(id) || state.pendingSpot;
-      if (!spot) return;
-      // 第一步：点位介绍
-      showSpotIntro(spot);
+    // 判断某点位是否已经在某个格子里（避免重复占用）
+    function findSlotOfSpot(spotId) {
+      const slots = state.me.gridSlots || [null, null, null];
+      for (let i = 0; i < 3; i++) {
+        if (slots[i] && slots[i].spotId === spotId) return i;
+      }
+      return -1;
     }
 
-    function showSpotIntro(spot) {
-      const existingRec = (state.me.completedSpots || []).find(r => r.spotId === spot.id);
-      const hasRecord = !!existingRec;
+    // 气泡式点位选择
+    function openSlotPicker(slotIdx) {
+      // 可选点位（当前园区匹配，且未被其他格子占用）
+      const campusId = state.me.campus && state.me.campus.id;
+      const allSpots = (state.boot.spots || []).filter((s) => {
+        if (!campusId) return true;
+        return inCampus(s, campusId);
+      });
+
+      if (!allSpots.length) {
+        openSheet(`
+          <h3 style="text-align:center">暂无可选点位</h3>
+          <p class="hint" style="text-align:center">当前园区暂无配置点位。可在右上角切换园区试试。</p>
+          <div class="btn-row"><button class="primary" id="goChangeCampus">切换园区</button></div>
+        `);
+        $("goChangeCampus").onclick = () => showCampusPicker();
+        return;
+      }
+
+      // 当前格子已有记录时，支持直接重新打卡
+      const currentRec = (state.me.gridSlots || [])[slotIdx];
+      const currentSpotId = currentRec ? currentRec.spotId : null;
+
+      const html = allSpots.map((s, i) => {
+        const occupiedSlot = findSlotOfSpot(s.id);
+        const takenByOther = occupiedSlot >= 0 && occupiedSlot !== slotIdx;
+        return `
+          <button class="bubble-item ${takenByOther ? 'taken' : ''}" data-id="${esc(s.id)}" ${takenByOther ? 'disabled' : ''}
+                  style="visibility:hidden;animation-delay:${(i * 0.2).toFixed(1)}s;">
+            <span class="bubble-photo"><img src="${esc(s.cardImageUrl || s.detailImageUrl || "")}" alt="" onerror="this.style.display='none'"></span>
+            <span class="bubble-caption">${esc(s.name)}</span>
+          </button>`;
+      }).join("");
+
+      // 小气泡装饰（瓶肚内上升）
+      const sparkles = Array.from({length: 8}, (_, i) => {
+        const sz = 4 + Math.random() * 7;
+        const left = 22 + Math.random() * 56;   // 22%-78%
+        const top  = 58 + Math.random() * 28;   // 58%-86%（瓶底区域往上冒）
+        const delay = (Math.random() * 6).toFixed(1);
+        return `<span class="glass-sparkle" style="left:${left}%;top:${top}%;width:${sz}px;height:${sz}px;animation-delay:${delay}s"></span>`;
+      }).join("");
+
+      openSheet(`
+        <h3 class="picker-title">选择一个点位</h3>
+        <p class="picker-hint">轻点玻璃瓶里的气泡进入打卡</p>
+        <div class="bubble-picker">
+          ${glassBottleSvg()}
+          ${sparkles}
+          ${html}
+        </div>
+      `, { glass: true });
+
+      const picker = $("panel").querySelector(".bubble-picker");
+      const bubbles = buildBubbleLayout(allSpots.length, picker.clientWidth, picker.clientHeight);
+      $("panel").querySelectorAll(".bubble-item").forEach((el) => {
+        const b = bubbles.shift();
+        el.style.left = b.left + "px";
+        el.style.top = b.top + "px";
+        el.style.width = b.size + "px";
+        el.style.visibility = "visible";
+        if (el.disabled) return;
+        el.onclick = () => {
+          const sid = el.dataset.id;
+          const spot = (state.boot.spots || []).find((s) => s.id === sid);
+          if (spot) showSpotIntro(spot, slotIdx);
+        };
+      });
+    }
+
+    // 玻璃瓶 SVG（宽肚短颈 / 透明玻璃 / 软木塞 / 无标签文字）
+    function glassBottleSvg() {
+      return `
+        <svg class="glass-bottle" viewBox="0 0 340 320" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+          <defs>
+            <linearGradient id="bodyFill" x1="0" x2="1" y1="0" y2="0">
+              <stop offset="0%"   stop-color="rgba(188, 222, 230, 0.55)"/>
+              <stop offset="45%"  stop-color="rgba(220, 240, 245, 0.42)"/>
+              <stop offset="100%" stop-color="rgba(130, 190, 210, 0.58)"/>
+            </linearGradient>
+            <linearGradient id="corkFill" x1="0" x2="0" y1="0" y2="1">
+              <stop offset="0%"  stop-color="#d4a876"/>
+              <stop offset="55%" stop-color="#a97b44"/>
+              <stop offset="100%" stop-color="#7d542a"/>
+            </linearGradient>
+            <linearGradient id="corkRing" x1="0" x2="0" y1="0" y2="1">
+              <stop offset="0%" stop-color="#6b4420"/>
+              <stop offset="100%" stop-color="#4d2e13"/>
+            </linearGradient>
+            <linearGradient id="hl" x1="0" x2="0" y1="0" y2="1">
+              <stop offset="0%"  stop-color="rgba(255,255,255,0.85)"/>
+              <stop offset="100%" stop-color="rgba(255,255,255,0.05)"/>
+            </linearGradient>
+          </defs>
+          <!-- 软木塞主体 -->
+          <rect x="135" y="4" width="70" height="22" rx="4" fill="url(#corkFill)"/>
+          <!-- 软木塞底部深色环 -->
+          <rect x="128" y="22" width="84" height="10" rx="3" fill="url(#corkRing)"/>
+          <!-- 瓶颈（玻璃） -->
+          <rect x="140" y="32" width="60" height="28" fill="url(#bodyFill)" stroke="rgba(255,255,255,0.75)" stroke-width="1.4"/>
+          <!-- 瓶肩 + 宽瓶身 -->
+          <path d="M140 60
+                   Q 70 70, 50 115
+                   L 50 272
+                   Q 50 305 115 305
+                   Q 170 312 225 305
+                   Q 290 305 290 272
+                   L 290 115
+                   Q 270 70, 200 60
+                   Z"
+                fill="url(#bodyFill)"
+                stroke="rgba(255,255,255,0.78)"
+                stroke-width="2"/>
+          <!-- 瓶底曲线 -->
+          <path d="M70 288 Q 170 302, 270 288" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="1.5"/>
+          <!-- 左高光 -->
+          <path d="M72 125 Q 62 200, 74 272" fill="none" stroke="url(#hl)" stroke-width="8" stroke-linecap="round"/>
+          <!-- 右高光 -->
+          <path d="M278 145 Q 282 200, 276 240" fill="none" stroke="rgba(255,255,255,0.35)" stroke-width="4" stroke-linecap="round"/>
+        </svg>`;
+    }
+
+    // Drop bubbles from random horizontal positions until they rest on the floor or another bubble.
+    function buildBubbleLayout(n, width, height) {
+      if (!n) return [];
+      const left = width * 0.18, right = width * 0.82;
+      const top = height * 0.34, bottom = height * 0.88;
+      const gap = 5, labelHeight = 24;
+      const cols = Math.max(1, Math.ceil(Math.sqrt(n * (right - left) / (bottom - top))));
+      const rows = Math.ceil(n / cols);
+      const size = Math.max(8, Math.min(86,
+        (right - left - (cols - 1) * gap) / cols,
+        (bottom - top - (rows - 1) * gap) / rows - labelHeight));
+      const placed = [];
+      for (let i = 0; i < n; i++) {
+        let best = null;
+        const maxX = right - size;
+        // Random starts create a loose pile; a full scan guarantees a place when space is tight.
+        for (let attempt = 0; attempt < 180; attempt++) {
+          const x = attempt < 80 ? left + Math.random() * (maxX - left)
+            : left + (maxX - left) * (attempt - 80) / 99;
+          let y = bottom - size - labelHeight;
+          for (const other of placed) {
+            if (x < other.left + other.size + gap && x + size + gap > other.left) {
+              y = Math.min(y, other.top - size - labelHeight - gap);
+            }
+          }
+          if (y < top) continue;
+          if (!best || y > best.top) best = { left: x, top: y, size };
+          if (best.top === bottom - size - labelHeight && attempt >= 24) break;
+        }
+        if (!best) {
+          // A dense bottle falls back to the smallest non-overlapping grid.
+          return Array.from({ length: n }, (_, index) => ({
+            left: left + (index % cols) * ((right - left) / cols),
+            top: bottom - (Math.floor(index / cols) + 1) * ((bottom - top) / rows),
+            size,
+          }));
+        }
+        placed.push(best);
+      }
+      return placed;
+    }
+
+    function showSpotIntro(spot, slotIdx) {
+      const existingRec = (state.me.gridSlots || [])[slotIdx];
+      const sameSpot = existingRec && existingRec.spotId === spot.id;
       openSheet(`
         <img class="spot-visual" src="${esc(spot.detailImageUrl || spot.cardImageUrl || "")}" alt="${esc(spot.name)}">
         <h3 class="spot-title">${esc(spot.name)}</h3>
-        <div class="spot-intro-full">${esc(spot.intro || "暂无介绍")}</div>
+        <div class="spot-intro-full">${spot.intro || "暂无介绍"}</div>
         <div class="btn-row" style="justify-content:center;">
-          <button class="primary" id="goUpload">${hasRecord ? "重新上传" : "开始打卡"}</button>
+          <button class="primary" id="goUpload">${sameSpot ? "重新上传" : "开始打卡"}</button>
         </div>
       `);
-      $("goUpload").onclick = () => showSpotUpload(spot);
+      // 富文本里的链接默认在当前窗口打开，这里统一改为新窗口
+      $("panel").querySelectorAll(".spot-intro-full a").forEach((a) => {
+        a.setAttribute("target", "_blank");
+        a.setAttribute("rel", "noopener");
+      });
+      $("goUpload").onclick = () => showSpotUpload(spot, slotIdx);
     }
 
-    function showSpotUpload(spot) {
+    function showSpotUpload(spot, slotIdx) {
       const campusId = state.me.campus && state.me.campus.id;
       const mismatch = campusId && !inCampus(spot, campusId);
-      const existingRec = (state.me.completedSpots || []).find(r => r.spotId === spot.id);
-      const oldPhoto = existingRec ? existingRec.photoUrl : "";
-      const oldNote = existingRec ? existingRec.note : "";
+      const existingRec = (state.me.gridSlots || [])[slotIdx];
+      const sameSpot = existingRec && existingRec.spotId === spot.id;
+      const oldPhoto = sameSpot ? existingRec.photoUrl : "";
 
       openSheet(`
         <h3 class="spot-title" style="margin-top:0;">${esc(spot.name)}</h3>
         ${mismatch ? `<p class="hint" style="text-align:center">该点位未包含当前园区标签，提交前请确认。</p>` : ""}
 
         <div class="upload-area" id="uploadArea">
+          <svg class="camera-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+            <circle cx="12" cy="13" r="4"/>
+          </svg>
           <span id="uploadText" class="${oldPhoto ? 'hidden' : ''}">点击上传捕捉到的美好</span>
           <img id="uploadPreview" class="${oldPhoto ? '' : 'hidden'}" src="${esc(oldPhoto)}" alt="预览">
           <input id="photo" type="file" accept="image/jpeg,image/png,image/webp" capture="environment" style="display:none;">
@@ -1560,8 +2081,7 @@
         </div>
         <div class="reupload-tip ${oldPhoto ? '' : 'hidden'}" id="reuploadTip">点击重新上传照片</div>
 
-        <textarea id="note" class="compact" maxlength="10" placeholder="写点什么... (10字以内)">${esc(oldNote)}</textarea>
-        <div class="btn-row" style="justify-content:center;gap:8px;">
+        <div class="btn-row" style="justify-content:center;gap:8px;margin-top:12px;">
           <button class="primary" id="submitCheckin">提交打卡</button>
         </div>
       `);
@@ -1573,7 +2093,6 @@
       const reuploadTip = $("reuploadTip");
       const drawBtn = $("drawBtn");
 
-      // 当前已有/选中的图片 dataURL（用于画画编辑的输入源）
       let currentDataUrl = oldPhoto || "";
       if (currentDataUrl) drawBtn.classList.remove("hidden");
 
@@ -1587,7 +2106,6 @@
       };
 
       uploadArea.onclick = (e) => {
-        // 点"画画"按钮不触发文件选择
         if (e.target === drawBtn || drawBtn.contains(e.target)) return;
         photoInput.click();
       };
@@ -1601,27 +2119,23 @@
       };
       drawBtn.onclick = (e) => {
         e.stopPropagation();
-        if (!currentDataUrl) {
-          toast("请先上传照片");
-          return;
-        }
+        if (!currentDataUrl) { toast("请先上传照片"); return; }
         openDrawEditor(currentDataUrl, (newDataUrl) => {
           setPhoto(newDataUrl);
-          // 清掉 input 的文件，避免后续以 file 为准
           photoInput.value = "";
         });
       };
 
-      $("submitCheckin").onclick = () => submitCheckin(spot, currentDataUrl);
+      $("submitCheckin").onclick = () => submitCheckin(spot, currentDataUrl, slotIdx);
     }
 
-    async function submitCheckin(spot, currentDataUrl) {
+    async function submitCheckin(spot, currentDataUrl, slotIdx) {
       const file = $("photo").files[0];
-      const note = $("note").value;
-      const existingRec = (state.me.completedSpots || []).find(r => r.spotId === spot.id);
+      const existingRec = (state.me.gridSlots || [])[slotIdx];
+      const sameSpot = existingRec && existingRec.spotId === spot.id;
 
       // 优先用传入的 currentDataUrl（可能已画过），其次 file，再其次原记录
-      const hasAny = !!(currentDataUrl || file || existingRec);
+      const hasAny = !!(currentDataUrl || file || sameSpot);
       if (!hasAny) return toast("请先点击虚线框上传照片");
 
       if (state.me.campus && !inCampus(spot, state.me.campus.id)) {
@@ -1636,11 +2150,10 @@
       $("submitCheckin").disabled = true;
       $("submitCheckin").textContent = "处理中…";
       try {
-        let dataUrl = existingRec ? existingRec.photoUrl : "";
+        let dataUrl = sameSpot ? existingRec.photoUrl : "";
         if (file) {
           dataUrl = await compressImage(file, 1000, 0.72);
         } else if (currentDataUrl) {
-          // 画过的 dataURL 已经是压缩 PNG，重新压一遍为 JPEG 以减小体积
           dataUrl = await compressDataUrl(currentDataUrl, 1000, 0.82);
         }
 
@@ -1649,10 +2162,17 @@
           spotId: spot.id,
           spot: spot,
           photoUrl: dataUrl,
-          note: note || "",
+          note: "", // 用户要求去掉说点什么输入框
           createdAt: Date.now(),
+          slotIdx,
         };
 
+        // 写入指定格子
+        state.me.gridSlots[slotIdx] = rec;
+        if (state.me.campus) {
+          state.me.gridSlotsByCampus[state.me.campus.id] = state.me.gridSlots;
+        }
+        // 同步记录到 completedSpots（去重）
         const list = (state.me.completedSpots || []).filter((r) => r.spotId !== spot.id);
         list.push(rec);
         state.me.completedSpots = list;
@@ -1661,9 +2181,7 @@
         saveMe();
         closeSheet();
         renderHome();
-        // 打卡总数 +1
         incrementAbacus("total_checkins");
-
       } catch (err) {
         toast("照片处理失败：" + err.message);
         $("submitCheckin").disabled = false;
@@ -1704,6 +2222,10 @@
         <p class="hint" style="text-align:center">${esc(state.boot.activity.sociMeaning)}</p>
 
         <div class="upload-area" id="uploadAreaSoci">
+          <svg class="camera-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+            <circle cx="12" cy="13" r="4"/>
+          </svg>
           <span id="uploadTextSoci" class="${has ? 'hidden' : ''}">上传与 SOCI 的合照</span>
           <img id="uploadPreviewSoci" class="${has ? '' : 'hidden'}" src="${esc(state.me.sociPhotoUrl || '')}" alt="预览">
           <input id="sociFile" type="file" accept="image/jpeg,image/png,image/webp" capture="environment" style="display:none;">
@@ -1711,8 +2233,7 @@
         </div>
         <div class="reupload-tip ${has ? '' : 'hidden'}" id="reuploadTipSoci">点击重新上传照片</div>
 
-        <textarea id="sociNote" class="compact" maxlength="10" placeholder="写点什么... (10字以内)">${esc(state.me.sociNote || "")}</textarea>
-        <div class="btn-row"><button class="primary" id="submitSoci">${has ? "确认替换" : "上传照片"}</button></div>
+        <div class="btn-row" style="margin-top:12px;"><button class="primary" id="submitSoci">${has ? "确认替换" : "上传照片"}</button></div>
       `);
 
       const uploadArea = $("uploadAreaSoci");
@@ -1759,13 +2280,10 @@
 
     async function submitSoci(currentDataUrl) {
       const file = $("sociFile").files[0];
-      const note = $("sociNote").value;
       if (!file && !currentDataUrl && !state.me.sociPhotoUrl) return toast("请先选择照片");
 
-      // 如果用户没重传、没画过，只改了备注
+      // 没重传、没画过
       if (!file && currentDataUrl === state.me.sociPhotoUrl) {
-        state.me.sociNote = note;
-        saveMe();
         closeSheet();
         return;
       }
@@ -1780,7 +2298,7 @@
           dataUrl = await compressDataUrl(currentDataUrl, 1000, 0.82);
         }
         state.me.sociPhotoUrl = dataUrl;
-        state.me.sociNote = note;
+        state.me.sociNote = "";
         saveMe();
         closeSheet();
         renderHome();
@@ -1793,7 +2311,7 @@
 
     function openTicketFlow() {
       if (!state.me || !state.me.progress || !state.me.progress.unlocked) {
-        toast("完成任意 3 项打卡后可生成票根");
+        toast("请先在当前园区完成 3 个不同点位的打卡");
         return;
       }
       if (!state.me.sociPhotoUrl) {
@@ -1801,14 +2319,46 @@
         showSociSlot();
         return;
       }
-      composeFromGrids();
+      // 先弹便签让用户写 wish，再合成票根
+      showWishNote((wishText) => {
+        state.me.wish = wishText || "";
+        saveMe();
+        composeFromGrids();
+      });
+    }
+
+    // 便签：写一句对美好网易想说的话（可跳过）
+    function showWishNote(onDone) {
+      const old = (state.me && state.me.wish) || "";
+      openSheet(`
+        <div class="wish-note">
+          <h4>关于美好网易，你有什么想说的吗？</h4>
+          <textarea id="wishInput" maxlength="30" placeholder="写下你的心声... (30字以内，可不填)">${esc(old)}</textarea>
+          <div class="wish-counter"><span id="wishCount">${old.length}</span> / 30</div>
+          <div class="btn-row" style="justify-content:center;gap:10px;">
+            <button class="ghost" id="wishSkip" style="padding:10px 18px;">跳过</button>
+            <button class="primary" id="wishOk">确定</button>
+          </div>
+        </div>
+      `, { glass: true, wish: true });
+      const ta = $("wishInput");
+      const counter = $("wishCount");
+      ta.addEventListener("input", () => {
+        counter.textContent = String(ta.value.length);
+      });
+      $("wishSkip").onclick = () => { closeSheet(); onDone && onDone(""); };
+      $("wishOk").onclick = () => {
+        const txt = ta.value.trim();
+        closeSheet();
+        onDone && onDone(txt);
+      };
     }
 
     function matchTypeRule(latest, typeRules) {
       const rules = Array.isArray(typeRules) ? typeRules : [];
       const keywords = new Set();
       (latest || []).forEach((r) => {
-        (r.spot && r.spot.keywords || []).forEach((k) => keywords.add(k));
+        (r && r.spot && r.spot.keywords || []).forEach((k) => keywords.add(k));
       });
       let best = null, bestScore = 0;
       rules.forEach((rule) => {
@@ -1823,336 +2373,44 @@
     }
 
     async function composeFromGrids() {
-      const latest = ((state.me.progress && state.me.progress.latest) || []).slice(0, 3);
-      const photos = latest.map((r) => r.photoUrl);
-      const notes = latest.map((r) => r.note || "");
-      
+      const slots = state.me.gridSlots || [null, null, null];
+      // 按 slot 顺序取照片
+      const photos = [];
+      const notes = [];
+      const ipUrls = [];
+      for (let i = 0; i < 3; i++) {
+        if (slots[i]) {
+          photos.push(slots[i].photoUrl);
+          notes.push(""); // 已去掉每张 note
+          const spot = (state.boot.spots || []).find((s) => s.id === slots[i].spotId) || slots[i].spot;
+          ipUrls.push((spot && spot.ticketIpUrl) || "");
+        } else {
+          photos.push("");
+          notes.push("");
+          ipUrls.push("");
+        }
+      }
       if (state.me.sociPhotoUrl) {
         photos.push(state.me.sociPhotoUrl);
-        notes.push(state.me.sociNote || "");
+        notes.push("");
+        ipUrls.push("");
       }
-      
+
       const template = state.boot.ticketTemplate || {};
       $("btnTicket").disabled = true;
-      $("btnTicket").textContent = "生成中…";
       try {
-        showTypeAndTicket({
+        await showTypeAndTicket({
           template: template,
-          ticket: { photos, notes },
-          typeResult: matchTypeRule(latest, state.boot.typeRules),
+          ticket: { photos, notes, ipUrls, wish: state.me.wish || "" },
+          typeResult: matchTypeRule(slots.filter(Boolean), state.boot.typeRules),
           activity: state.boot.activity,
         });
-        
-        // 票根生成次数 +1
         incrementAbacus("total_tickets");
-        
       } catch (err) {
         toast(err.message || "生成失败");
       } finally {
         $("btnTicket").disabled = false;
-        $("btnTicket").textContent = "生成票根";
       }
     }
 
-    function composeTicketCanvas({ activity, template, photos, notes, showNotes, canvas }) {
-      return new Promise(async (resolve, reject) => {
-        try {
-          const W = Number(template.width) || 1200;
-          const H = Number(template.height) || 1800;
-          canvas.width = W;
-          canvas.height = H;
-          const ctx = canvas.getContext("2d");
-          ctx.fillStyle = "#f3e6cf";
-          ctx.fillRect(0, 0, W, H);
-
-          const loadImage = (src) => new Promise((res, rej) => {
-            const img = new Image();
-            if (!/^data:/.test(src)) img.crossOrigin = "anonymous";
-            img.onload = () => res(img);
-            img.onerror = () => {
-              if (!/^data:/.test(src) && !src.includes('wsrv.nl')) {
-                const proxySrc = `https://wsrv.nl/?url=${encodeURIComponent(src)}`;
-                const img2 = new Image();
-                img2.crossOrigin = "anonymous";
-                img2.onload = () => res(img2);
-                img2.onerror = () => rej(new Error("图片加载失败"));
-                img2.src = proxySrc;
-              } else {
-                rej(new Error("图片加载失败"));
-              }
-            };
-            img.src = src;
-          });
-
-          const drawCover = (img, x, y, w, h, radius) => {
-            ctx.save();
-            const r = Math.min(radius || 0, w / 2, h / 2);
-            ctx.beginPath();
-            ctx.moveTo(x + r, y);
-            ctx.arcTo(x + w, y, x + w, y + h, r);
-            ctx.arcTo(x + w, y + h, x, y + h, r);
-            ctx.arcTo(x, y + h, x, y, r);
-            ctx.arcTo(x, y, x + w, y, r);
-            ctx.closePath();
-            ctx.clip();
-            const scale = Math.max(w / img.width, h / img.height);
-            const dw = img.width * scale;
-            const dh = img.height * scale;
-            ctx.drawImage(img, x + (w - dw) / 2, y + (h - dh) / 2, dw, dh);
-            ctx.restore();
-          };
-
-          const drawTextNote = (text, i, s) => {
-            if (!showNotes || !text) return;
-            
-            const fontSize = Math.round(W / 45); 
-            const margin = Math.round(W / 35);   
-
-            ctx.font = `italic 500 ${fontSize}px "Source Han Sans SC", "Noto Sans SC", "PingFang SC", sans-serif`;
-            
-            const displayText = `“${text}”`;
-            const metrics = ctx.measureText(displayText);
-            const textWidth = metrics.width;
-            const textHeight = fontSize; 
-            
-            let textX, textY;
-            
-            if (i === 0) { 
-              textX = s.x + s.w - textWidth - margin;
-              textY = s.y + s.h - margin;
-            } else if (i === 1) { 
-              textX = s.x + margin;
-              textY = s.y + s.h - margin;
-            } else if (i === 2) { 
-              textX = s.x + s.w - textWidth - margin;
-              textY = s.y + margin + textHeight;
-            } else { 
-              textX = s.x + margin;
-              textY = s.y + margin + textHeight;
-            }
-
-            ctx.save();
-            ctx.fillStyle = "#ffffff";
-            ctx.textBaseline = "bottom";
-            ctx.shadowColor = "rgba(0,0,0,0.8)";
-            ctx.shadowBlur = 6;
-            ctx.shadowOffsetX = 2;
-            ctx.shadowOffsetY = 2;
-            ctx.fillText(displayText, textX, textY);
-            ctx.restore();
-          };
-
-          const drawNickname = () => {
-            if (!showNotes || !state.me.userInfo || !state.me.userInfo.name) return;
-            
-            const fontSize = Math.round(W / 38); 
-            const margin = Math.round(W / 22); 
-
-            ctx.font = `italic 500 ${fontSize}px "Source Han Sans SC", "Noto Sans SC", "PingFang SC", sans-serif`;
-            
-            const displayText = `@${state.me.userInfo.name}`;
-            const metrics = ctx.measureText(displayText);
-            const textWidth = metrics.width;
-            
-            const textX = (W - textWidth) / 2;
-            const textY = H - margin;
-
-            ctx.save();
-            ctx.fillStyle = "#ffffff";
-            ctx.textBaseline = "bottom";
-            ctx.shadowColor = "rgba(0,0,0,0.8)";
-            ctx.shadowBlur = 6;
-            ctx.shadowOffsetX = 2;
-            ctx.shadowOffsetY = 2;
-            ctx.fillText(displayText, textX, textY);
-            ctx.restore();
-          };
-
-          const slots = Array.isArray(template.slots) ? template.slots : [];
-          
-          for (let i = 0; i < slots.length; i++) {
-            const s = slots[i];
-            if (!photos[i]) continue;
-            try {
-              const img = await loadImage(photos[i]);
-              drawCover(img, s.x, s.y, s.w, s.h, s.radius || 12);
-              drawTextNote(notes[i], i, s);
-            } catch (e) { console.warn("照片加载失败", e); }
-          }
-
-          const frameUrl = template.frameImageUrl || template.imageUrl;
-          if (frameUrl && !/placehold\.co/i.test(frameUrl)) {
-            try {
-              const frame = await loadImage(frameUrl);
-              ctx.drawImage(frame, 0, 0, W, H);
-            } catch (e) {
-              console.warn("外框图加载失败", e);
-            }
-          }
-
-          drawNickname(); 
-
-          try {
-            const dataUrl = canvas.toDataURL("image/png");
-            resolve({ url: dataUrl, degraded: false });
-          } catch (e) {
-            if (e.name === 'SecurityError' || e.message.includes('tainted')) {
-              canvas.width = W;
-              canvas.height = H;
-              const ctx2 = canvas.getContext("2d");
-              ctx2.fillStyle = "#f3e6cf";
-              ctx2.fillRect(0, 0, W, H);
-
-              for (let i = 0; i < slots.length; i++) {
-                const s = slots[i];
-                if (!photos[i]) continue;
-                try {
-                  const img = await loadImage(photos[i]);
-                  drawCover(img, s.x, s.y, s.w, s.h, s.radius || 12);
-                  drawTextNote(notes[i], i, s);
-                } catch (err) {}
-              }
-              drawNickname();
-              const dataUrl = canvas.toDataURL("image/png");
-              resolve({ url: dataUrl, degraded: true });
-            } else {
-              reject(new Error("导出图片失败，请截图保存"));
-            }
-          }
-        } catch (err) {
-          reject(err);
-        }
-      });
-    }
-
-    async function showTypeAndTicket(data) {
-      const template = data.template || state.boot.ticketTemplate || {};
-      const typeName = (data.typeResult && data.typeResult.name) || "";
-      const typeDesc = (data.typeResult && data.typeResult.description) || "";
-
-      toast("正在生成高清票根...");
-
-      try {
-        const res = await composeTicketCanvas({
-          activity: data.activity,
-          template,
-          photos: data.ticket.photos,
-          notes: data.ticket.notes,
-          showNotes: state.showNotesInTicket,
-          canvas: $("ticketCanvas"),
-        });
-
-        $("imagePreviewImg").src = res.url;
-        $("downloadBtn").href = res.url;
-        $("imagePreviewLayer").classList.remove("hidden");
-        if (res.degraded) {
-          toast("由于外框图跨域限制，已生成不带外框的图片。");
-        }
-      } catch (err) {
-        toast(err.message || "导出失败，请重试");
-      }
-    }
-
-    async function boot() {
-      // 初始化涂鸦编辑器（一次性）
-      initDrawToolbar();
-
-      const params = new URLSearchParams(location.search);
-      if (params.get("reset") === "1") {
-        localStorage.removeItem("nh_employee_id");
-        for (let i = localStorage.length - 1; i >= 0; i--) {
-          const key = localStorage.key(i);
-          if (key && key.startsWith("nh_me_")) localStorage.removeItem(key);
-        }
-        toast("已重置所有记录");
-        const newParams = new URLSearchParams(location.search);
-        newParams.delete("reset");
-        const newSearch = newParams.toString() ? "?" + newParams.toString() : "";
-        window.history.replaceState(null, "", location.pathname + newSearch);
-      }
-
-      try {
-        state.boot = window.BOOT_CONFIG;
-        if (!state.boot || !state.boot.activity) throw new Error("config.js 配置加载失败，请检查");
-      } catch (err) {
-        toast(err.message);
-        return;
-      }
-
-      // 加载在线人数
-      updateOnlineDisplay();
-
-      const spotId = params.get("spot");
-      if (spotId) {
-        $("intro").classList.add("hidden");
-        $("app").classList.remove("hidden");
-        enterApp();
-        return;
-      }
-
-      // 入场动画在部分浏览器（如微信）无法 autoplay，
-      // 为保证跨端一致性，这里统一取消入场动画，直接进入主页面。
-      $("intro").classList.add("hidden");
-      $("app").classList.remove("hidden");
-      enterApp();
-    }
-
-    async function enterApp() {
-      if (state.entered) return;
-      state.entered = true;
-      const video = $("introVideo");
-      if (video) {
-        video.onended = null;
-        video.pause();
-      }
-      $("intro").classList.add("hidden");
-      $("app").classList.remove("hidden");
-      try {
-        await ensureId();
-        renderHome();
-        const params = new URLSearchParams(location.search);
-        const spotId = params.get("spot");
-        
-        if (spotId) {
-          const found = (state.boot.spots || []).find((s) => s.id === spotId);
-          if (!found) {
-            toast("点位不存在");
-            if (!state.me.userInfo) checkAuth(); else showPlayGuide();
-            return;
-          }
-          state.pendingSpot = found;
-          if (state.me.campus && !inCampus(found, state.me.campus.id)) {
-            openSheet(`<h3 style="text-align:center">园区不一致</h3><p class="hint">扫码点位未包含当前园区标签。</p><div class="btn-row"><button class="primary" id="goSpot">查看点位</button></div>`);
-            $("goSpot").onclick = () => showSpot(spotId);
-          } else showSpot(spotId);
-        } else {
-          if (!state.me.userInfo) {
-            showPlayGuide();
-          } else {
-            state.guideShown = true; 
-          }
-        }
-      } catch (err) { toast(err.message); }
-    }
-
-    $("btnCampus").onclick = () => {
-      if (!state.me.userInfo) {
-        toast("请先认证捕手");
-        checkAuth();
-        return;
-      }
-      showCampusPicker();
-    };
-    
-    $("btnTicket").onclick = openTicketFlow;
-    $("sheetClose").onclick = closeSheet;
-    $("sheet").onclick = (e) => { if (e.target.id === "sheet") closeSheet(); };
-    
-    $("closeImagePreview").onclick = () => {
-      $("imagePreviewLayer").classList.add("hidden");
-    };
-
-    boot();
-  </script>
-</body>
-</html>
+    function composeTicketCanvas({ activity, template, photos, notes, ipUr
