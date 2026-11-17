@@ -2509,12 +2509,17 @@
 
             ctx.font = `italic 500 ${fontSize}px "Source Han Sans SC", "Noto Sans SC", "PingFang SC", sans-serif`;
 
-            const displayText = `@${state.me.userInfo.name}`;
+            const campusName = state.me.campus && state.me.campus.name;
+            const displayText = `@${state.me.userInfo.name}${campusName ? ` · ${campusName}` : ""}`;
             const metrics = ctx.measureText(displayText);
             const textWidth = metrics.width;
 
             const textX = (W - textWidth) / 2;
-            const textY = H - margin;
+            const tplWish = template.wish || {};
+            const wishFontSize = Number(tplWish.fontSize) || fontSize;
+            const configuredGap = Number(tplWish.lineGap);
+            const lineGap = Number.isFinite(configuredGap) ? configuredGap : wishFontSize * 0.5;
+            const textY = H - margin - (wish ? 0 : (fontSize + lineGap) / 2);
 
             ctx.save();
             ctx.fillStyle = "#ffffff";
