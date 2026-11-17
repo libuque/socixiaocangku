@@ -83,63 +83,72 @@
     }
     
     /* 顶部在线人数 */
-    .online-badge {
+    .top-badges {
       position: absolute;
       top: 20px;
-      right: 20px;
+      left: 8px;
+      right: 8px;
       z-index: 10;
+      display: grid;
+      grid-template-columns: minmax(0, 47fr) minmax(0, 53fr);
+      gap: 8px;
+      align-items: stretch;
+    }
+    .online-badge {
       background: rgba(255,255,255,0.85);
       backdrop-filter: blur(4px);
-      padding: 6px 14px;
+      padding: 3px 5px;
       border-radius: 999px;
-      font-size: 12px;
+      font-size: 10px;
+      font-weight: bold;
+      color: var(--teal);
+      border: 1px solid rgba(20,125,120,0.2);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+      display: block;
+      min-width: 0;
+      height: 100%;
+      line-height: 1.2;
+      text-align: center;
+    }
+    .online-badge span { color: #f56565; font-size: 12px; }
+
+    .user-badge {
+      background: rgba(255,255,255,0.9);
+      backdrop-filter: blur(4px);
+      padding: 5px 7px;
+      border-radius: 999px;
+      font-size: 10px;
       font-weight: bold;
       color: var(--teal);
       border: 1px solid rgba(20,125,120,0.2);
       box-shadow: 0 2px 8px rgba(0,0,0,0.05);
       display: flex;
       align-items: center;
-      gap: 4px;
-    }
-    .online-badge span { color: #f56565; font-size: 14px; }
-
-    .user-badge {
-      position: absolute;
-      top: 54px;
-      right: 20px;
-      z-index: 10;
-      background: rgba(255,255,255,0.9);
-      backdrop-filter: blur(4px);
-      padding: 6px 12px;
-      border-radius: 999px;
-      font-size: 12px;
-      font-weight: bold;
-      color: var(--teal);
-      border: 1px solid rgba(20,125,120,0.2);
-      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
+      justify-content: center;
+      gap: 3px;
       cursor: pointer;
-      max-width: calc(100% - 40px);
+      width: 100%;
+      min-width: 0;
+      height: 100%;
+      line-height: 1.2;
+      text-align: center;
     }
     .user-badge .uname {
       color: #17324d;
-      max-width: 80px;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
+      min-width: 0;
+      overflow-wrap: anywhere;
+      flex: 0 1 auto;
     }
     .user-badge .sep {
       opacity: 0.4;
       font-weight: normal;
     }
     .user-badge .cname {
-      max-width: 90px;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
+      min-width: 0;
+      overflow-wrap: anywhere;
+      flex: 0 1 auto;
     }
+    .user-badge .sep, .user-badge .arrow { flex-shrink: 0; }
     .user-badge .arrow {
       font-size: 10px;
       color: var(--teal);
@@ -156,6 +165,15 @@
       overflow: hidden;
       position: relative;
       z-index: 1;
+    }
+    @media (max-width: 767px) {
+      body { display: flex; align-items: center; justify-content: center; }
+      #app {
+        height: min(100dvh, calc(100vw * 844 / 390));
+        width: auto;
+        aspect-ratio: 390 / 844;
+        flex: none;
+      }
     }
     /* 电脑端：#app 作为"手机画框"居中显示，保持手机比例（390:844 ≈ 0.462） */
     @media (min-width: 768px) {
@@ -398,7 +416,7 @@
     .grid .frame {
       position: absolute; inset: 0;
       width: 100%; height: 100%;
-      object-fit: contain; 
+      object-fit: contain;
       pointer-events: none;
       z-index: 2;
     }
@@ -428,10 +446,9 @@
     /* 气泡式点位选择面板（玻璃瓶内漂浮） */
     .bubble-picker {
       position: relative;
-      width: 100%;
-      aspect-ratio: 340 / 320;
-      max-height: 76vh;
-      min-height: 280px;
+      width: min(100%, 63.5vh);
+      aspect-ratio: 340 / 460;
+      max-height: 86vh;
       margin: 0 auto;
       overflow: hidden;
     }
@@ -502,16 +519,15 @@
       padding: 4px 3px;
       border: 1px solid rgba(255, 220, 211, .85);
       border-radius: 999px;
-      font-size: clamp(9px, 2.5vw, 12px);
+      font-size: clamp(11px, 3vw, 13px);
       line-height: 1.2;
       font-weight: 700;
       color: #fff;
       background: #b93237;
       box-shadow: 0 3px 7px rgba(103, 34, 34, .24);
       text-align: center;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
+      white-space: normal;
+      overflow-wrap: anywhere;
     }
     .bubble-item.taken {
       opacity: 0.4;
@@ -649,6 +665,7 @@
       display: none;
     }
     #sheet.sheet:not(.hidden) { display: flex; }
+    #sheet.sheet:has(.panel-glass) { padding: 6px; }
     .panel {
       position: relative;
       width: min(92vw, 420px);
@@ -664,10 +681,10 @@
 
     /* 透明玻璃面板（选点位用） */
     .panel.panel-glass {
-      width: min(98vw, 540px);
+      width: min(100%, 540px);
       background: transparent;
       border-radius: 0;
-      padding: 28px 4px 4px;
+      padding: 28px 0 0;
       max-height: 94vh;
       box-shadow: none;
       overflow: visible;
@@ -1046,11 +1063,12 @@
 
   <main id="app">
     <div id="bgLayer"></div>
-    <!-- 顶部在线人数 -->
-    <div id="onlineBadge" class="online-badge hidden">
-      正有 <span id="onlineCount">0</span> 人正在和你一起寻找美好
+    <div class="top-badges">
+      <div id="userBadge" class="user-badge hidden"></div>
+      <div id="onlineBadge" class="online-badge hidden">
+        正有<span id="onlineCount">0</span>人与你一起寻找美好
+      </div>
     </div>
-    <div id="userBadge" class="user-badge hidden"></div>
 
     <header class="hero lay" id="layTitle"><img id="titleImg" alt="活动主题" /></header>
     <div class="lay" id="layCharacter"><img id="characterImg" alt="人物" /></div>
@@ -1061,24 +1079,16 @@
 
     <!-- 4 个独立打卡格（每个格子布局独立，支持后台自定义位置） -->
     <button class="grid lay" id="gridSlot0" data-slot="0" type="button">
-      <div class="grid-bg"></div>
-      <img class="frame" alt="">
-      <span class="label"></span>
+      <div class="grid-bg"></div><img class="frame" alt=""><span class="label"></span>
     </button>
     <button class="grid lay" id="gridSlot1" data-slot="1" type="button">
-      <div class="grid-bg"></div>
-      <img class="frame" alt="">
-      <span class="label"></span>
+      <div class="grid-bg"></div><img class="frame" alt=""><span class="label"></span>
     </button>
     <button class="grid lay" id="gridSlot2" data-slot="2" type="button">
-      <div class="grid-bg"></div>
-      <img class="frame" alt="">
-      <span class="label"></span>
+      <div class="grid-bg"></div><img class="frame" alt=""><span class="label"></span>
     </button>
     <button class="grid lay me-slot" id="gridSlot3" data-slot="3" type="button">
-      <div class="grid-bg"></div>
-      <img class="frame" alt="">
-      <span class="label"></span>
+      <div class="grid-bg"></div><img class="frame" alt=""><span class="label"></span>
     </button>
 
     <button class="ticket-btn lay" id="btnTicket" type="button">
@@ -1104,7 +1114,7 @@
     <div class="tip">请长按图片或点击下方按钮保存</div>
     <div class="btn-group">
       <a id="downloadBtn" class="download-btn" download="nicehunt-ticket.png">保存图片到本地</a>
-      <a class="jump-btn" href="https://e.netease.com/community/post/166042" target="_blank">跳转易网 参与抽奖</a>
+      <a class="jump-btn" href="popo://miniprogram?appId=655433110&amp;env=PRODUCTION&amp;targetPage=post&amp;id=166042">跳转易网 参与抽奖</a>
     </div>
   </div>
 
@@ -1375,8 +1385,6 @@
         grid3: $("gridSlot3"),
         ticketBtn: $("btnTicket"),
       };
-      // 打卡格强制正方形：只设 width，height 由 aspect-ratio 决定
-      const gridKeys = { grid0: 1, grid1: 1, grid2: 1, grid3: 1 };
       Object.keys(map).forEach((key) => {
         const el = map[key];
         const box = items[key];
@@ -1389,12 +1397,7 @@
         el.style.left = box.x + "%";
         el.style.top = box.y + "%";
         el.style.width = box.w + "%";
-        if (gridKeys[key]) {
-          // 高度由 aspect-ratio: 1/1 控制，照片不会超出框
-          el.style.height = "auto";
-        } else {
-          el.style.height = box.h + "%";
-        }
+        el.style.height = key.startsWith("grid") ? "auto" : box.h + "%";
       });
     }
 
@@ -1948,7 +1951,7 @@
     // 玻璃瓶 SVG（宽肚短颈 / 透明玻璃 / 软木塞 / 无标签文字）
     function glassBottleSvg() {
       return `
-        <svg class="glass-bottle" viewBox="0 0 340 320" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+        <svg class="glass-bottle" viewBox="0 0 340 460" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
           <defs>
             <linearGradient id="bodyFill" x1="0" x2="1" y1="0" y2="0">
               <stop offset="0%"   stop-color="rgba(188, 222, 230, 0.55)"/>
@@ -1977,35 +1980,35 @@
           <rect x="140" y="32" width="60" height="28" fill="url(#bodyFill)" stroke="rgba(255,255,255,0.75)" stroke-width="1.4"/>
           <!-- 瓶肩 + 宽瓶身 -->
           <path d="M140 60
-                   Q 70 70, 50 115
-                   L 50 272
-                   Q 50 305 115 305
-                   Q 170 312 225 305
-                   Q 290 305 290 272
-                   L 290 115
-                   Q 270 70, 200 60
+                   Q 42 68, 16 120
+                   L 16 412
+                   Q 16 448 105 448
+                   Q 170 454 235 448
+                   Q 324 448 324 412
+                   L 324 120
+                   Q 298 68, 200 60
                    Z"
                 fill="url(#bodyFill)"
                 stroke="rgba(255,255,255,0.78)"
                 stroke-width="2"/>
           <!-- 瓶底曲线 -->
-          <path d="M70 288 Q 170 302, 270 288" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="1.5"/>
+          <path d="M35 431 Q 170 447 305 431" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="1.5"/>
           <!-- 左高光 -->
-          <path d="M72 125 Q 62 200, 74 272" fill="none" stroke="url(#hl)" stroke-width="8" stroke-linecap="round"/>
+          <path d="M38 137 Q 28 275, 40 407" fill="none" stroke="url(#hl)" stroke-width="8" stroke-linecap="round"/>
           <!-- 右高光 -->
-          <path d="M278 145 Q 282 200, 276 240" fill="none" stroke="rgba(255,255,255,0.35)" stroke-width="4" stroke-linecap="round"/>
+          <path d="M306 145 Q 313 265, 306 370" fill="none" stroke="rgba(255,255,255,0.35)" stroke-width="4" stroke-linecap="round"/>
         </svg>`;
     }
 
     // Drop bubbles from random horizontal positions until they rest on the floor or another bubble.
     function buildBubbleLayout(n, width, height) {
       if (!n) return [];
-      const left = width * 0.18, right = width * 0.82;
-      const top = height * 0.34, bottom = height * 0.88;
-      const gap = 5, labelHeight = 24;
+      const left = width * 0.095, right = width * 0.905;
+      const top = height * 0.27, bottom = height * 0.94;
+      const gap = 6, labelHeight = 30;
       const cols = Math.max(1, Math.ceil(Math.sqrt(n * (right - left) / (bottom - top))));
       const rows = Math.ceil(n / cols);
-      const size = Math.max(8, Math.min(86,
+      const size = Math.max(8, Math.min(104,
         (right - left - (cols - 1) * gap) / cols,
         (bottom - top - (rows - 1) * gap) / rows - labelHeight));
       const placed = [];
