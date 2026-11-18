@@ -39,29 +39,6 @@
       background: #17324d; color: #fff; padding: 10px 16px; border-radius: 999px;
       z-index: 90; max-width: 84vw; font-size: 13px; text-align: center; line-height: 1.5;
     }
-    .cover {
-      position: fixed; inset: 0; background: #000;
-      z-index: 50; color: #fff;
-    }
-    .cover video {
-      position: absolute; inset: 0;
-      width: 100%; height: 100%;
-      object-fit: cover;
-      background: #000;
-    }
-    .cover .actions {
-      position: absolute;
-      left: 50%;
-      top: 78%;
-      transform: translate(-50%, -50%);
-      z-index: 52;
-    }
-    #introFallback {
-      position: absolute; left: 50%; top: 58%;
-      transform: translate(-50%, -50%);
-      z-index: 51;
-    }
-    
     .primary, .ghost, .chip, .icon-btn { border: 0; cursor: pointer; }
     .primary, .ghost { 
       border-radius: 999px; 
@@ -765,6 +742,26 @@
     }
     .upload-area span { color: #8c7b66; font-size: 13px; font-weight: 500; }
     .upload-area img { width: 100%; height: 100%; object-fit: contain; display: block; }
+    .upload-choices {
+      position: absolute;
+      bottom: 8px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 6px;
+      z-index: 4;
+      white-space: nowrap;
+    }
+    .upload-choices button {
+      border: 1px solid rgba(196, 92, 38, .45);
+      border-radius: 999px;
+      padding: 5px 10px;
+      background: rgba(255, 250, 243, .94);
+      color: #8c5b32;
+      font-size: 11px;
+      cursor: pointer;
+    }
+    .upload-choices button:active { transform: scale(.96); }
     /* 当已有预览时，隐藏相机图标 */
     .upload-area:has(img:not(.hidden)) .camera-icon { display: none; }
 
@@ -872,6 +869,13 @@
       margin-top: 8px;
       text-align: center;
     }
+    .image-preview-layer .search-tip {
+      color: #ffe08a;
+      font-size: 14px;
+      margin-top: 12px;
+      text-align: center;
+      line-height: 1.5;
+    }
     .image-preview-layer .btn-group {
       margin-top: 20px;
       display: flex;
@@ -902,7 +906,6 @@
       border: 1px solid rgba(255,255,255,0.4);
     }
 
-    .type-pop { text-align: center; padding: 6px 8px 14px; }
     .hint { font-size: 12px; color: #6b7280; line-height: 1.6; white-space: pre-wrap; }
     .btn-row { display: flex; gap: 8px; justify-content: center; margin-top: 12px; flex-wrap: wrap; align-items: center; }
     
@@ -918,11 +921,51 @@
       width: auto;
     }
 
-    .spot-visual { width: 100%; max-height: 160px; object-fit: contain; background: transparent; margin: 0 auto; display: block; }
+    .spot-intro-card {
+      position: relative;
+      margin: 64px 0 0;
+      padding: 46px 12px 16px;
+      border-radius: 18px;
+      background: #fff3e6;
+      border: 1px solid #ead9bd;
+    }
+    .spot-intro-card .spot-visual {
+      position: absolute;
+      z-index: 2;
+      top: -62px;
+      left: 10px;
+      width: 96px;
+      height: 96px;
+      border-radius: 50%;
+      border: 3px solid #fff;
+      object-fit: cover;
+      background: #fff;
+      box-shadow: 0 5px 14px rgba(23,50,77,.2);
+    }
+    .spot-name-badge {
+      position: absolute;
+      z-index: 1;
+      top: -32px;
+      left: 110px;
+      right: 8px;
+      min-height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: #b93237;
+      color: #fff;
+      font-size: 15px;
+      font-weight: 700;
+      text-align: center;
+      line-height: 1.35;
+      box-shadow: 0 4px 10px rgba(103,34,34,.18);
+    }
     .spot-title { text-align: center; margin: 8px 0 6px; font-size: 18px; }
     .spot-intro { text-align: center; margin-bottom: 8px; font-size: 13px; line-height: 1.6; }
     .spot-intro-full {
-      text-align: center;
+      text-align: left;
       font-size: 14px;
       line-height: 1.75;
       color: #4b3f31;
@@ -1061,20 +1104,12 @@
 <body>
   <div id="toast" class="toast hidden"></div>
   
-  <section id="intro" class="cover hidden">
-    <video id="introVideo" playsinline autoplay muted></video>
-    <p id="introFallback" class="hidden">动画加载中…若无法播放可直接进入</p>
-    <div class="actions">
-      <button class="primary" id="skipIntro">进入活动</button>
-    </div>
-  </section>
-
   <main id="app">
     <div id="bgLayer"></div>
     <div class="top-badges">
       <div id="userBadge" class="user-badge hidden"></div>
       <div id="onlineBadge" class="online-badge hidden">
-        正有<span id="onlineCount">0</span>人与你一起寻找美好
+        已有<span id="onlineCount">0</span>人和你一起寻找美好
       </div>
     </div>
 
@@ -1115,15 +1150,13 @@
   <div id="imagePreviewLayer" class="image-preview-layer hidden">
     <div class="close-icon" id="closeImagePreview">×</div>
     <div class="ticket-notice">
-      凭本页面可前往<b>各地服务台</b>领取 1 份小礼物<br>
+      <b>11月20日至11月26日</b><br>
+      凭本页面可前往<b>各地服务台</b>领取 1 份小礼物，数量有限，先到先得<br>
       也可保存图片，前往易网继续参与<b>惊喜大抽奖</b>
     </div>
     <img id="imagePreviewImg" src="" alt="长按保存">
-    <div class="tip">请长按图片或点击下方按钮保存</div>
-    <div class="btn-group">
-      <a id="downloadBtn" class="download-btn" download="nicehunt-ticket.png">保存图片到本地</a>
-      <a class="jump-btn" href="popo://miniprogram?appId=655433110&amp;env=PRODUCTION&amp;targetPage=post&amp;id=166042">跳转易网 参与抽奖</a>
-    </div>
+    <div class="tip">长按图片保存</div>
+    <p class="search-tip">前往易网搜索【美好放大镜】参与更多抽奖</p>
   </div>
 
   <canvas id="ticketCanvas" class="hidden"></canvas>
@@ -1154,6 +1187,8 @@
   <script>
     // ================= 统计配置区 =================
     const NAMESPACE = "libuque_nicehunt"; 
+    const USERS_COUNTER_KEY = "total_users_v2";
+    const TICKETS_COUNTER_KEY = "total_tickets_v2";
     // ==============================================
 
     const state = {
@@ -1169,11 +1204,12 @@
       hasShownReupload: localStorage.getItem("nh_has_shown_reupload") === "1",
     };
     const $ = (id) => document.getElementById(id);
-    const toast = (msg) => {
+    const toast = (msg, duration = 2400) => {
       const el = $("toast");
       el.textContent = msg;
       el.classList.remove("hidden");
-      setTimeout(() => el.classList.add("hidden"), 2400);
+      clearTimeout(toast.timer);
+      if (duration) toast.timer = setTimeout(() => el.classList.add("hidden"), duration);
     };
     const esc = (value) => String(value || "").replace(/[&<>"']/g, (ch) => ({
       "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
@@ -1201,14 +1237,12 @@
       }
     }
 
-    // 刷新顶部在线人数显示
+    // 刷新顶部累计参与人数显示
     async function updateOnlineDisplay() {
-      const count = await fetchAbacus("total_users");
+      const count = await fetchAbacus(USERS_COUNTER_KEY);
       if (count > 0) {
         $("onlineBadge").classList.remove("hidden");
-        // 加一点随机波动让数字显得生动
-        const displayCount = count + Math.floor(Math.random() * 3); 
-        $("onlineCount").textContent = displayCount;
+        $("onlineCount").textContent = count;
       }
     }
     // ==========================================================
@@ -1329,7 +1363,7 @@
         if (oldTip) oldTip.remove();
 
         const frameEl = el.querySelector(".frame");
-        if (frameEl) frameEl.src = frame;
+        if (frameEl && frameEl.getAttribute("src") !== frame) frameEl.src = frame;
 
         const labelEl = el.querySelector(".label");
 
@@ -1460,7 +1494,9 @@
 
     function renderHome() {
       const boot = state.boot;
-      $("titleImg").src = boot.activity.titleImageUrl || "";
+      if ($("titleImg").getAttribute("src") !== (boot.activity.titleImageUrl || "")) {
+        $("titleImg").src = boot.activity.titleImageUrl || "";
+      }
       // 人物层
       const charUrl = boot.activity.characterImageUrl || "";
       if (charUrl) $("characterImg").src = charUrl;
@@ -1489,7 +1525,7 @@
       const ticketBtnImgUrl = boot.activity.ticketBtnImageUrl || "";
       if (ticketBtnImgUrl) {
         btn.classList.add("has-img");
-        btnImg.src = ticketBtnImgUrl;
+        if (btnImg.getAttribute("src") !== ticketBtnImgUrl) btnImg.src = ticketBtnImgUrl;
         btnImg.classList.remove("hidden");
         btnText.classList.add("hidden");
       } else {
@@ -1602,7 +1638,7 @@
         toast("认证成功，开启捕手之旅");
         
         // 认证成功后，使用量 +1，并更新顶部显示
-        await incrementAbacus("total_users");
+        await incrementAbacus(USERS_COUNTER_KEY);
         updateOnlineDisplay();
       };
       
@@ -2055,11 +2091,14 @@
       const existingRec = (state.me.gridSlots || [])[slotIdx];
       const sameSpot = existingRec && existingRec.spotId === spot.id;
       openSheet(`
-        <img class="spot-visual" src="${esc(spot.detailImageUrl || spot.cardImageUrl || "")}" alt="${esc(spot.name)}">
-        <h3 class="spot-title">${esc(spot.name)}</h3>
-        <div class="spot-intro-full">${spot.intro || "暂无介绍"}</div>
-        <div class="btn-row" style="justify-content:center;">
-          <button class="primary" id="goUpload">${sameSpot ? "重新上传" : "开始打卡"}</button>
+        <div class="spot-intro-card">
+          <img class="spot-visual" src="${esc(spot.detailImageUrl || spot.cardImageUrl || "")}" alt="${esc(spot.name)}">
+          <div class="spot-name-badge">${esc(spot.name)}</div>
+          ${spot.slogan ? `<h3 class="spot-title">${esc(spot.slogan)}</h3>` : ""}
+          <div class="spot-intro-full">${spot.intro || "暂无介绍"}</div>
+          <div class="btn-row" style="justify-content:center;">
+            <button class="primary" id="goUpload">${sameSpot ? "重新上传" : "开始打卡"}</button>
+          </div>
         </div>
       `);
       // 富文本里的链接默认在当前窗口打开，这里统一改为新窗口
@@ -2089,6 +2128,10 @@
           <span id="uploadText" class="${oldPhoto ? 'hidden' : ''}">点击上传捕捉到的美好</span>
           <img id="uploadPreview" class="${oldPhoto ? '' : 'hidden'}" src="${esc(oldPhoto)}" alt="预览">
           <input id="photo" type="file" accept="image/jpeg,image/png,image/webp" capture="environment" style="display:none;">
+          <div class="upload-choices" id="photoChoices">
+            <button type="button" data-source="camera">拍照</button>
+            <button type="button" data-source="album">从相册选择</button>
+          </div>
           <button type="button" class="draw-btn hidden" id="drawBtn">🎨 点击涂鸦美好</button>
         </div>
         <div class="reupload-tip ${oldPhoto ? '' : 'hidden'}" id="reuploadTip">点击重新上传照片</div>
@@ -2104,6 +2147,7 @@
       const uploadText = $("uploadText");
       const reuploadTip = $("reuploadTip");
       const drawBtn = $("drawBtn");
+      const photoChoices = $("photoChoices");
 
       let currentDataUrl = oldPhoto || "";
       if (currentDataUrl) drawBtn.classList.remove("hidden");
@@ -2118,9 +2162,17 @@
       };
 
       uploadArea.onclick = (e) => {
-        if (e.target === drawBtn || drawBtn.contains(e.target)) return;
+        if (e.target === drawBtn || drawBtn.contains(e.target) || e.target.closest(".upload-choices")) return;
         photoInput.click();
       };
+      photoChoices.querySelectorAll("button").forEach((button) => {
+        button.onclick = (e) => {
+          e.stopPropagation();
+          if (button.dataset.source === "camera") photoInput.setAttribute("capture", "environment");
+          else photoInput.removeAttribute("capture");
+          photoInput.click();
+        };
+      });
       photoInput.onchange = (e) => {
         const file = e.target.files[0];
         if (file) {
@@ -2241,6 +2293,10 @@
           <span id="uploadTextSoci" class="${has ? 'hidden' : ''}">上传与 SOCI 的合照</span>
           <img id="uploadPreviewSoci" class="${has ? '' : 'hidden'}" src="${esc(state.me.sociPhotoUrl || '')}" alt="预览">
           <input id="sociFile" type="file" accept="image/jpeg,image/png,image/webp" capture="environment" style="display:none;">
+          <div class="upload-choices" id="sociChoices">
+            <button type="button" data-source="camera">拍照</button>
+            <button type="button" data-source="album">从相册选择</button>
+          </div>
           <button type="button" class="draw-btn ${has ? '' : 'hidden'}" id="drawBtnSoci">🎨 点击涂鸦美好</button>
         </div>
         <div class="reupload-tip ${has ? '' : 'hidden'}" id="reuploadTipSoci">点击重新上传照片</div>
@@ -2254,6 +2310,7 @@
       const uploadText = $("uploadTextSoci");
       const reuploadTip = $("reuploadTipSoci");
       const drawBtn = $("drawBtnSoci");
+      const sociChoices = $("sociChoices");
 
       let currentDataUrl = state.me.sociPhotoUrl || "";
 
@@ -2267,9 +2324,17 @@
       };
 
       uploadArea.onclick = (e) => {
-        if (e.target === drawBtn || drawBtn.contains(e.target)) return;
+        if (e.target === drawBtn || drawBtn.contains(e.target) || e.target.closest(".upload-choices")) return;
         photoInput.click();
       };
+      sociChoices.querySelectorAll("button").forEach((button) => {
+        button.onclick = (e) => {
+          e.stopPropagation();
+          if (button.dataset.source === "camera") photoInput.setAttribute("capture", "environment");
+          else photoInput.removeAttribute("capture");
+          photoInput.click();
+        };
+      });
       photoInput.onchange = (e) => {
         const file = e.target.files[0];
         if (file) {
@@ -2366,24 +2431,6 @@
       };
     }
 
-    function matchTypeRule(latest, typeRules) {
-      const rules = Array.isArray(typeRules) ? typeRules : [];
-      const keywords = new Set();
-      (latest || []).forEach((r) => {
-        (r && r.spot && r.spot.keywords || []).forEach((k) => keywords.add(k));
-      });
-      let best = null, bestScore = 0;
-      rules.forEach((rule) => {
-        if (rule.isDefault) return;
-        const hits = (rule.keywords || []).filter((k) => keywords.has(k)).length;
-        if (hits > bestScore) { bestScore = hits; best = rule; }
-      });
-      if (best) return { name: best.name, description: best.description };
-      const fallback = rules.find((r) => r.isDefault);
-      if (fallback) return { name: fallback.name, description: fallback.description };
-      return { name: "美好捕手", description: "活动趣味结果，非正式测评" };
-    }
-
     async function composeFromGrids() {
       const slots = state.me.gridSlots || [null, null, null];
       // 按 slot 顺序取照片
@@ -2411,13 +2458,11 @@
       const template = state.boot.ticketTemplate || {};
       $("btnTicket").disabled = true;
       try {
-        await showTypeAndTicket({
+        await showTicket({
           template: template,
           ticket: { photos, notes, ipUrls, wish: state.me.wish || "" },
-          typeResult: matchTypeRule(slots.filter(Boolean), state.boot.typeRules),
           activity: state.boot.activity,
         });
-        incrementAbacus("total_tickets");
       } catch (err) {
         toast(err.message || "生成失败");
       } finally {
@@ -2436,24 +2481,31 @@
           ctx.fillStyle = "#f3e6cf";
           ctx.fillRect(0, 0, W, H);
 
-          const loadImage = (src) => new Promise((res, rej) => {
-            const img = new Image();
-            if (!/^data:/.test(src)) img.crossOrigin = "anonymous";
-            img.onload = () => res(img);
-            img.onerror = () => {
-              if (!/^data:/.test(src) && !src.includes('wsrv.nl')) {
-                const proxySrc = `https://wsrv.nl/?url=${encodeURIComponent(src)}`;
-                const img2 = new Image();
-                img2.crossOrigin = "anonymous";
-                img2.onload = () => res(img2);
-                img2.onerror = () => rej(new Error("图片加载失败"));
-                img2.src = proxySrc;
-              } else {
-                rej(new Error("图片加载失败"));
-              }
-            };
-            img.src = src;
-          });
+          const imageCache = new Map();
+          const loadImage = (src) => {
+            if (!imageCache.has(src)) {
+              const attempt = (url) => new Promise((res, rej) => {
+                const img = new Image();
+                if (!/^data:/.test(url)) img.crossOrigin = "anonymous";
+                const timer = setTimeout(() => {
+                  img.onload = img.onerror = null;
+                  img.src = "";
+                  rej(new Error("图片加载超时"));
+                }, 10000);
+                img.onload = () => { clearTimeout(timer); res(img); };
+                img.onerror = () => { clearTimeout(timer); rej(new Error("图片加载失败")); };
+                img.src = url;
+              });
+              // This image host does not send CORS headers; load via a CORS-enabled proxy for canvas.
+              const proxied = /^https:\/\/s\d+\.ax1x\.com\//i.test(src);
+              const firstUrl = proxied ? `https://wsrv.nl/?url=${encodeURIComponent(src)}` : src;
+              imageCache.set(src, attempt(firstUrl).catch((err) => {
+                if (proxied || /^data:/.test(src) || src.includes("wsrv.nl")) throw err;
+                return attempt(`https://wsrv.nl/?url=${encodeURIComponent(src)}`);
+              }));
+            }
+            return imageCache.get(src);
+          };
 
           const drawCover = (img, x, y, w, h, radius) => {
             ctx.save();
@@ -2576,6 +2628,15 @@
           };
 
           const slots = Array.isArray(template.slots) ? template.slots : [];
+          const frameUrl = template.frameImageUrl || template.imageUrl;
+          const requiredPhotos = slots.map((_, i) => photos[i]).filter(Boolean);
+          const required = [...requiredPhotos, frameUrl].filter(Boolean);
+          const optional = (ipUrls || []).filter(Boolean);
+          const optionalLoads = Promise.allSettled(optional.map((src) => loadImage(src)));
+          await Promise.all(required.map((src) => loadImage(src))).catch((err) => {
+            throw new Error("票根照片或外框加载失败，请检查网络后重试：" + err.message);
+          });
+          await optionalLoads;
           
           for (let i = 0; i < slots.length; i++) {
             const s = slots[i];
@@ -2587,13 +2648,12 @@
             } catch (e) { console.warn("照片加载失败", e); }
           }
 
-          const frameUrl = template.frameImageUrl || template.imageUrl;
           if (frameUrl && !/placehold\.co/i.test(frameUrl)) {
             try {
               const frame = await loadImage(frameUrl);
               ctx.drawImage(frame, 0, 0, W, H);
             } catch (e) {
-              console.warn("外框图加载失败", e);
+              throw new Error("票根外框图加载失败，请检查图片链接后重试");
             }
           }
 
@@ -2649,12 +2709,10 @@
       });
     }
 
-    async function showTypeAndTicket(data) {
+    async function showTicket(data) {
       const template = data.template || state.boot.ticketTemplate || {};
-      const typeName = (data.typeResult && data.typeResult.name) || "";
-      const typeDesc = (data.typeResult && data.typeResult.description) || "";
 
-      toast("正在生成高清票根...");
+      toast("正在生成高清票根，请稍候…", 0);
 
       try {
         const res = await composeTicketCanvas({
@@ -2669,8 +2727,12 @@
         });
 
         $("imagePreviewImg").src = res.url;
-        $("downloadBtn").href = res.url;
         $("imagePreviewLayer").classList.remove("hidden");
+        $("toast").classList.add("hidden");
+        incrementAbacus(TICKETS_COUNTER_KEY);
+        if (state.me.campus && state.me.campus.id) {
+          incrementAbacus("tickets_campus_" + state.me.campus.id);
+        }
         if (res.degraded) {
           toast("由于外框图跨域限制，已生成不带外框的图片。");
         }
@@ -2708,31 +2770,12 @@
       // 加载在线人数
       updateOnlineDisplay();
 
-      const spotId = params.get("spot");
-      if (spotId) {
-        $("intro").classList.add("hidden");
-        $("app").classList.remove("hidden");
-        enterApp();
-        return;
-      }
-
-      // 入场动画在部分浏览器（如微信）无法 autoplay，
-      // 为保证跨端一致性，这里统一取消入场动画，直接进入主页面。
-      $("intro").classList.add("hidden");
-      $("app").classList.remove("hidden");
       enterApp();
     }
 
     async function enterApp() {
       if (state.entered) return;
       state.entered = true;
-      const video = $("introVideo");
-      if (video) {
-        video.onended = null;
-        video.pause();
-      }
-      $("intro").classList.add("hidden");
-      $("app").classList.remove("hidden");
       try {
         await ensureId();
         renderHome();
