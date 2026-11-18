@@ -1187,6 +1187,8 @@
   <script>
     // ================= 统计配置区 =================
     const NAMESPACE = "libuque_nicehunt"; 
+    const USERS_COUNTER_KEY = "total_users_v2";
+    const TICKETS_COUNTER_KEY = "total_tickets_v2";
     // ==============================================
 
     const state = {
@@ -1236,7 +1238,7 @@
 
     // 刷新顶部累计参与人数显示
     async function updateOnlineDisplay() {
-      const count = await fetchAbacus("total_users");
+      const count = await fetchAbacus(USERS_COUNTER_KEY);
       if (count > 0) {
         $("onlineBadge").classList.remove("hidden");
         $("onlineCount").textContent = count;
@@ -1633,7 +1635,7 @@
         toast("认证成功，开启捕手之旅");
         
         // 认证成功后，使用量 +1，并更新顶部显示
-        await incrementAbacus("total_users");
+        await incrementAbacus(USERS_COUNTER_KEY);
         updateOnlineDisplay();
       };
       
@@ -2458,7 +2460,6 @@
           ticket: { photos, notes, ipUrls, wish: state.me.wish || "" },
           activity: state.boot.activity,
         });
-        incrementAbacus("total_tickets");
       } catch (err) {
         toast(err.message || "生成失败");
       } finally {
@@ -2709,6 +2710,10 @@
 
         $("imagePreviewImg").src = res.url;
         $("imagePreviewLayer").classList.remove("hidden");
+        incrementAbacus(TICKETS_COUNTER_KEY);
+        if (state.me.campus && state.me.campus.id) {
+          incrementAbacus("tickets_campus_" + state.me.campus.id);
+        }
         if (res.degraded) {
           toast("由于外框图跨域限制，已生成不带外框的图片。");
         }
