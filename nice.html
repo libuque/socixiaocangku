@@ -1204,11 +1204,12 @@
       hasShownReupload: localStorage.getItem("nh_has_shown_reupload") === "1",
     };
     const $ = (id) => document.getElementById(id);
-    const toast = (msg) => {
+    const toast = (msg, duration = 2400) => {
       const el = $("toast");
       el.textContent = msg;
       el.classList.remove("hidden");
-      setTimeout(() => el.classList.add("hidden"), 2400);
+      clearTimeout(toast.timer);
+      if (duration) toast.timer = setTimeout(() => el.classList.add("hidden"), duration);
     };
     const esc = (value) => String(value || "").replace(/[&<>"']/g, (ch) => ({
       "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
@@ -1362,7 +1363,7 @@
         if (oldTip) oldTip.remove();
 
         const frameEl = el.querySelector(".frame");
-        if (frameEl) frameEl.src = frame;
+        if (frameEl && frameEl.getAttribute("src") !== frame) frameEl.src = frame;
 
         const labelEl = el.querySelector(".label");
 
@@ -1493,7 +1494,9 @@
 
     function renderHome() {
       const boot = state.boot;
-      $("titleImg").src = boot.activity.titleImageUrl || "";
+      if ($("titleImg").getAttribute("src") !== (boot.activity.titleImageUrl || "")) {
+        $("titleImg").src = boot.activity.titleImageUrl || "";
+      }
       // 人物层
       const charUrl = boot.activity.characterImageUrl || "";
       if (charUrl) $("characterImg").src = charUrl;
@@ -1522,7 +1525,7 @@
       const ticketBtnImgUrl = boot.activity.ticketBtnImageUrl || "";
       if (ticketBtnImgUrl) {
         btn.classList.add("has-img");
-        btnImg.src = ticketBtnImgUrl;
+        if (btnImg.getAttribute("src") !== ticketBtnImgUrl) btnImg.src = ticketBtnImgUrl;
         btnImg.classList.remove("hidden");
         btnText.classList.add("hidden");
       } else {
@@ -2478,24 +2481,31 @@
           ctx.fillStyle = "#f3e6cf";
           ctx.fillRect(0, 0, W, H);
 
-          const loadImage = (src) => new Promise((res, rej) => {
-            const img = new Image();
-            if (!/^data:/.test(src)) img.crossOrigin = "anonymous";
-            img.onload = () => res(img);
-            img.onerror = () => {
-              if (!/^data:/.test(src) && !src.includes('wsrv.nl')) {
-                const proxySrc = `https://wsrv.nl/?url=${encodeURIComponent(src)}`;
-                const img2 = new Image();
-                img2.crossOrigin = "anonymous";
-                img2.onload = () => res(img2);
-                img2.onerror = () => rej(new Error("图片加载失败"));
-                img2.src = proxySrc;
-              } else {
-                rej(new Error("图片加载失败"));
-              }
-            };
-            img.src = src;
-          });
+          const imageCache = new Map();
+          const loadImage = (src) => {
+            if (!imageCache.has(src)) {
+              const attempt = (url) => new Promise((res, rej) => {
+                const img = new Image();
+                if (!/^data:/.test(url)) img.crossOrigin = "anonymous";
+                const timer = setTimeout(() => {
+                  img.onload = img.onerror = null;
+                  img.src = "";
+                  rej(new Error("图片加载超时"));
+                }, 10000);
+                img.onload = () => { clearTimeout(timer); res(img); };
+                img.onerror = () => { clearTimeout(timer); rej(new Error("图片加载失败")); };
+                img.src = url;
+              });
+              // This image host does not send CORS headers; load via a CORS-enabled proxy for canvas.
+              const proxied = /^https:\/\/s\d+\.ax1x\.com\//i.test(src);
+              const firstUrl = proxied ? `https://wsrv.nl/?url=${encodeURIComponent(src)}` : src;
+              imageCache.set(src, attempt(firstUrl).catch((err) => {
+                if (proxied || /^data:/.test(src) || src.includes("wsrv.nl")) throw err;
+                return attempt(`https://wsrv.nl/?url=${encodeURIComponent(src)}`);
+              }));
+            }
+            return imageCache.get(src);
+          };
 
           const drawCover = (img, x, y, w, h, radius) => {
             ctx.save();
@@ -2618,6 +2628,15 @@
           };
 
           const slots = Array.isArray(template.slots) ? template.slots : [];
+          const frameUrl = template.frameImageUrl || template.imageUrl;
+          const requiredPhotos = slots.map((_, i) => photos[i]).filter(Boolean);
+          const required = [...requiredPhotos, frameUrl].filter(Boolean);
+          const optional = (ipUrls || []).filter(Boolean);
+          const optionalLoads = Promise.allSettled(optional.map((src) => loadImage(src)));
+          await Promise.all(required.map((src) => loadImage(src))).catch((err) => {
+            throw new Error("票根照片或外框加载失败，请检查网络后重试：" + err.message);
+          });
+          await optionalLoads;
           
           for (let i = 0; i < slots.length; i++) {
             const s = slots[i];
@@ -2629,13 +2648,12 @@
             } catch (e) { console.warn("照片加载失败", e); }
           }
 
-          const frameUrl = template.frameImageUrl || template.imageUrl;
           if (frameUrl && !/placehold\.co/i.test(frameUrl)) {
             try {
               const frame = await loadImage(frameUrl);
               ctx.drawImage(frame, 0, 0, W, H);
             } catch (e) {
-              console.warn("外框图加载失败", e);
+              throw new Error("票根外框图加载失败，请检查图片链接后重试");
             }
           }
 
@@ -2694,7 +2712,7 @@
     async function showTicket(data) {
       const template = data.template || state.boot.ticketTemplate || {};
 
-      toast("正在生成高清票根...");
+      toast("正在生成高清票根，请稍候…", 0);
 
       try {
         const res = await composeTicketCanvas({
@@ -2710,6 +2728,7 @@
 
         $("imagePreviewImg").src = res.url;
         $("imagePreviewLayer").classList.remove("hidden");
+        $("toast").classList.add("hidden");
         incrementAbacus(TICKETS_COUNTER_KEY);
         if (state.me.campus && state.me.campus.id) {
           incrementAbacus("tickets_campus_" + state.me.campus.id);
