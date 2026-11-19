@@ -1250,9 +1250,16 @@
     function saveMe() {
       try {
         if (state.me && state.me.employeeId) {
-          localStorage.setItem("nh_me_" + state.me.employeeId, JSON.stringify(state.me));
+          // Keep photos only in campus slots; progress, history and pending spots
+          // duplicate the same data and can exhaust mobile localStorage.
+          const { gridSlots, completedSpots, pendingSpots, progress, ...saved } = state.me;
+          localStorage.setItem("nh_me_" + state.me.employeeId, JSON.stringify(saved));
         }
-      } catch (e) {}
+        return true;
+      } catch (e) {
+        console.warn("保存打卡记录失败", e);
+        return false;
+      }
     }
 
     function recalcProgress() {
@@ -1591,7 +1598,6 @@
       state.me.pendingSpots = (state.boot.spots || []);
       
       recalcProgress();
-      saveMe();
     }
 
     function checkAuth() {
@@ -2216,9 +2222,9 @@
       try {
         let dataUrl = sameSpot ? existingRec.photoUrl : "";
         if (file) {
-          dataUrl = await compressImage(file, 1000, 0.72);
+          dataUrl = await compressImage(file, 700, 0.62);
         } else if (currentDataUrl) {
-          dataUrl = await compressDataUrl(currentDataUrl, 1000, 0.82);
+          dataUrl = await compressDataUrl(currentDataUrl, 700, 0.62);
         }
 
         const rec = {
@@ -2231,23 +2237,23 @@
           slotIdx,
         };
 
+        const previous = state.me.gridSlots[slotIdx];
         // 写入指定格子
         state.me.gridSlots[slotIdx] = rec;
         if (state.me.campus) {
           state.me.gridSlotsByCampus[state.me.campus.id] = state.me.gridSlots;
         }
-        // 同步记录到 completedSpots（去重）
-        const list = (state.me.completedSpots || []).filter((r) => r.spotId !== spot.id);
-        list.push(rec);
-        state.me.completedSpots = list;
-
         recalcProgress();
-        saveMe();
+        if (!saveMe()) {
+          state.me.gridSlots[slotIdx] = previous;
+          recalcProgress();
+          throw new Error("浏览器未能保存照片，请选择较小的图片后重试");
+        }
         closeSheet();
         renderHome();
         incrementAbacus("total_checkins");
       } catch (err) {
-        toast("照片处理失败：" + err.message);
+        toast("打卡未保存：" + err.message);
         $("submitCheckin").disabled = false;
         $("submitCheckin").textContent = "失败，点此重试";
       }
@@ -2370,17 +2376,21 @@
       try {
         let dataUrl = "";
         if (file) {
-          dataUrl = await compressImage(file, 1000, 0.72);
+          dataUrl = await compressImage(file, 700, 0.62);
         } else if (currentDataUrl) {
-          dataUrl = await compressDataUrl(currentDataUrl, 1000, 0.82);
+          dataUrl = await compressDataUrl(currentDataUrl, 700, 0.62);
         }
+        const previousPhoto = state.me.sociPhotoUrl;
         state.me.sociPhotoUrl = dataUrl;
         state.me.sociNote = "";
-        saveMe();
+        if (!saveMe()) {
+          state.me.sociPhotoUrl = previousPhoto;
+          throw new Error("浏览器未能保存照片，请选择较小的图片后重试");
+        }
         closeSheet();
         renderHome();
       } catch (err) {
-        toast("照片处理失败：" + err.message);
+        toast("合照未保存：" + err.message);
         $("submitSoci").disabled = false;
         $("submitSoci").textContent = "失败，点此重试";
       }
