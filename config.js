@@ -9,7 +9,7 @@ window.BOOT_CONFIG = {
     "ticketBtnImageUrl": "https://libuque.github.io/socixiaocangku/nice/niceqita/anniu.png",
     "gridInnerInset": "20.8 5 16.5 6.9",
     "gridInnerShape": "rounded",
-    "playGuide": "1. 选择当前所在园区。\n2. 点击任意一个底部打卡框，从气泡中选择要去的点位。\n3. 到现场拍照并上传即可完成该格的打卡。\n4. 完成任意 3 个不同点位后，上传与 Soci 的合照。\n5. 写一句心声，即可生成专属网易美好四宫格。",
+    "playGuide": "1. 选择当前所在园区。\n2. 点击任意一个打卡框，从气泡中选择要去的点位。\n3. 到现场拍照并上传即可完成该格的打卡。\n4. 完成任意 3 个不同点位后，并上传与 Soci 的合照。\n5. 写一句心声，即可生成专属网易美好四宫格。",
     "prizeHint": "可前往当前园区服务台领取惊喜奖品，\n也可保存票根图片分享至易网评论区参与惊喜抽奖。",
     "sociMeaning": "与 Soci 合照，\n你也是网易美好的重要组成！",
     "layout": {
@@ -27,7 +27,7 @@ window.BOOT_CONFIG = {
         },
         "character": {
           "x": 0,
-          "y": 18,
+          "y": 17,
           "w": 100,
           "h": 28,
           "hidden": true
@@ -54,22 +54,22 @@ window.BOOT_CONFIG = {
           "hidden": false
         },
         "grid1": {
-          "x": 3.4,
-          "y": 55.5,
+          "x": 50.2,
+          "y": 37.9,
           "w": 47.4,
           "h": 17.8,
           "hidden": false
         },
         "grid2": {
-          "x": 50.3,
-          "y": 37.8,
+          "x": 2.9,
+          "y": 55.4,
           "w": 47.5,
           "h": 18,
           "hidden": false
         },
         "grid3": {
-          "x": 50.3,
-          "y": 55.6,
+          "x": 50,
+          "y": 55.4,
           "w": 47.4,
           "h": 17.7,
           "hidden": false
@@ -435,8 +435,8 @@ window.BOOT_CONFIG = {
         "campus-1794885186457-ylzl"
       ],
       "keywords": [],
-      "intro": "青浦园区露天非机动车区域配备<b><i>雨棚和多个充电口</i></b>，全天供电。<div>雨棚挡雨，充电口管饱，把车停好，满电再出发。</div>",
-      "slogan": "雨棚挡雨，充电口管饱，把车停好，满电再出发",
+      "intro": "青浦园区露天非机动车区域配备<b><i>雨棚和多个充电口</i></b>，全天供电。",
+      "slogan": "雨棚挡雨，充电口管饱；把车停好，满电再出发",
       "cardImageUrl": "https://libuque.github.io/socixiaocangku/nice/nicedian/dian%20(17).jpg",
       "detailImageUrl": "https://libuque.github.io/socixiaocangku/nice/nicedian/dian%20(17).jpg",
       "gridImageUrl": "",
